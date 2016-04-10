@@ -1,6 +1,6 @@
 # mug
 
-## Group
+## Participants
 
 * Ilari Paananen ilari.k.paananen@student.jyu.fi
 
@@ -16,6 +16,10 @@ Mug is going to be a compiler for a programming language called mug. Mug languag
 * procedures and functions
 
 Mug will either use LLVM as it's back end or generate AMD64 assembly from some intermediate language.
+
+Host language: C/C++
+
+Testing plan: unittests and examples
 
 NASM/AMD64 program for Windows that prints "mug":
 
