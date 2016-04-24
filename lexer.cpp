@@ -160,10 +160,11 @@ Token Lexer::next_token()
     {
         switch (peek())
         {
-            case 0: return make_token(Token::END);
+            case 0:
+                return make_token(Token::END);
+
             CASE_TWO('!', '=', NOT, NE);
             CASE_ONE('*', STAR);
-            CASE_ONE('/', SLASH); // TODO: Comments!
             CASE_ONE('+', PLUS);
             CASE_TWO('-', '>', MINUS, ARROW);
             CASE_TWO('&', '&', AMP, AND);
@@ -177,6 +178,49 @@ Token Lexer::next_token()
             CASE_ONE('}', RBRACE);
             CASE_ONE(',', COMMA);
             CASE_ONE(';', SEMICOLON);
+
+            case '/':
+                get();
+                if (peek() == '/') // single line comment
+                {
+                    get();
+                    while (peek() && peek() != '\n') get();
+                    break;
+                }
+                if (peek() == '*') // multi line comment
+                {
+                    bool terminated = false;
+
+                    get();
+                    while (peek())
+                    {
+                        char c = get();
+                        if (c == '*')
+                        {
+                            if (peek() == '/')
+                            {
+                                terminated = true;
+
+                                get();
+                                break;
+                            }
+                        }
+                        else if (c == '\n')
+                        {
+                            get();
+                            line++;
+                            column = 0;
+                        }
+                    }
+
+                    if (!terminated)
+                    {
+                        // TODO: Error!
+                    }
+
+                    break;
+                }
+                return make_token(Token::SLASH);
 
             case '_':
             case 'a'...'z':
@@ -263,8 +307,14 @@ int test_expected(char *input, Token::Type (&expected_tokens)[N])
     Lexer lexer(input);
     for (int i = 0; i < N; i++)
     {
-        if (lexer.next_token().type != expected_tokens[i])
+        Token::Type expected = expected_tokens[i];
+        Token::Type got = lexer.next_token().type;
+
+        if (got != expected)
+        {
+            printf("expected '%s', got '%s'\n", Token::get_str(expected), Token::get_str(got));
             return 1;
+        }
     }
     return 0;
 }
@@ -321,8 +371,8 @@ void run_lexer_tests()
         };
 
         TEST(test_expected,
-             "!*/+-&|==!=<><=>=&&||="
-             "->(){},;"  "if else while function return "
+             "!*/+-&|==!=<><=>=&&||= // single line comment\n"
+             "->(){},;"  "if else while function return /* multi\n  line\n  comment */"
              "int int8 int16 int32 int64 uint uint8 uint16 uint32 uint64 bool true false asdf 12345 å",
              expected_tokens)
     }
