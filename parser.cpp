@@ -98,11 +98,13 @@ bool Parser::parse_top_level()
 
 bool Parser::parse_statement()
 {
+    // empty statement
     if (accept(Token::SEMICOLON))
     {
         return true;
     }
 
+    // assign statement
     if (peek() == Token::IDENT) // TODO: Not necessarily just ident.
                                 // Could be dereferenced pointer for example.
     {
@@ -122,6 +124,7 @@ bool Parser::parse_statement()
         }
     }
 
+    // expression statement
     if (parse_expression())
     {
         if (expect(Token::SEMICOLON))
@@ -129,11 +132,13 @@ bool Parser::parse_statement()
         return false;
     }
 
+    // variable declaration statement
     if (parse_type())
     {
         if (!expect(Token::IDENT))
             return false;
 
+        // variable init
         if (accept(Token::ASSIGN))
         {
             if (!parse_expression())
@@ -146,6 +151,7 @@ bool Parser::parse_statement()
         return true;
     }
 
+    // return statement
     if (accept(Token::RETURN))
     {
         if (peek() != Token::SEMICOLON)
@@ -160,6 +166,7 @@ bool Parser::parse_statement()
         return true;
     }
 
+    // if statement
     if (accept(Token::IF))
     {
         if (!parse_expression())
@@ -168,6 +175,7 @@ bool Parser::parse_statement()
         if (!parse_statement())
             return expected_error("statement for if");
 
+        // else
         if (accept(Token::ELSE))
         {
             if (!parse_statement())
@@ -177,6 +185,7 @@ bool Parser::parse_statement()
         return true;
     }
 
+    // while statement
     if (accept(Token::WHILE))
     {
         if (!parse_expression())
@@ -188,6 +197,7 @@ bool Parser::parse_statement()
         return true;
     }
 
+    // statement block
     if (accept(Token::LBRACE))
     {
         while (parse_statement()) ;
@@ -198,6 +208,7 @@ bool Parser::parse_statement()
         return true;
     }
 
+    // function definition
     if (accept(Token::FUNCTION))
     {
         if (!expect(Token::IDENT))
@@ -206,14 +217,14 @@ bool Parser::parse_statement()
         if (!expect(Token::LPAREN))
             return false;
 
-        if (accept(Token::RPAREN))
-            return true;
+        if (!accept(Token::RPAREN))
+        {
+            if (!parse_parameters())
+                return false;
 
-        if (!parse_parameters())
-            return false;
-
-        if (!expect(Token::RPAREN))
-            return false;
+            if (!expect(Token::RPAREN))
+                return false;
+        }
 
         if (accept(Token::ARROW))
         {
@@ -262,94 +273,37 @@ bool Parser::parse_parameters()
     return true;
 }
 
-bool Parser::parse_expression()
-{
-    if (!parse_and())
-        return false;
 
-    while (true)
-    {
-        Token::Type op = token.type;
+//
+// Binary ops
+//
 
-        if (!accept(Token::OR))
-            return true;
+inline bool accept_any(Parser *p, Token::Type tt)
+{ return p->accept(tt); }
+template <class... Args>
+inline bool accept_any(Parser *p, Token::Type tt, Args... args)
+{ return (p->accept(tt) || accept_any(p, args...)); }
 
-        if (!parse_and())
-            return expected_operand_error(op);
-    }
+#define PARSE_BINOP(func_name, parse_operand_func, ...) \
+bool Parser::func_name() { \
+    if (!parse_operand_func()) return false; \
+    while (true) { \
+        Token::Type op = token.type; \
+        if (!accept_any(this, __VA_ARGS__)) return true; \
+        if (!parse_operand_func()) return expected_operand_error(op); \
+    } \
 }
 
-bool Parser::parse_and()
-{
-    if (!parse_comparison())
-        return false;
+PARSE_BINOP(parse_expression, parse_and, Token::OR)
+PARSE_BINOP(parse_and, parse_comparison, Token::AND)
+PARSE_BINOP(parse_comparison, parse_sum, Token::EQ, Token::NE, Token::LT, Token::GT, Token::LE, Token::GE)
+PARSE_BINOP(parse_sum, parse_term, Token::PLUS, Token::MINUS)
+PARSE_BINOP(parse_term, parse_prefixed_factor, Token::STAR, Token::SLASH)
 
-    while (true)
-    {
-        Token::Type op = token.type;
 
-        if (!accept(Token::AND))
-            return true;
-
-        if (!parse_comparison())
-            return expected_operand_error(op);
-    }
-}
-
-bool Parser::parse_comparison()
-{
-    if (!parse_sum())
-        return false;
-
-    while (true)
-    {
-        Token::Type op = token.type;
-
-        if (!accept(Token::EQ) && !accept(Token::NE) &&
-            !accept(Token::LT) && !accept(Token::GT) &&
-            !accept(Token::LE) && !accept(Token::GE))
-            return true;
-
-        if (!parse_sum())
-            return expected_operand_error(op);
-    }
-}
-
-bool Parser::parse_sum()
-{
-    if (!parse_term())
-        return false;
-
-    while (true)
-    {
-        Token::Type op = token.type;
-
-        if (!accept(Token::PLUS) &&
-            !accept(Token::MINUS))
-            return true;
-
-        if (!parse_term())
-            return expected_operand_error(op);
-    }
-}
-
-bool Parser::parse_term()
-{
-    if (!parse_prefixed_factor())
-        return false;
-
-    while (true)
-    {
-        Token::Type op = token.type;
-
-        if (!accept(Token::STAR) &&
-            !accept(Token::SLASH))
-            return true;
-
-        if (!parse_prefixed_factor())
-            return expected_operand_error(op);
-    }
-}
+//
+// Factors
+//
 
 bool Parser::parse_prefixed_factor()
 {
@@ -429,7 +383,12 @@ bool Parser::parse_arguments()
 // Parser tests
 //
 
-#define TEST(input) { char in[] = input; tests += 1; Parser p; if (!p.parse(in)) { printf("parser test #%d failed.\n", tests); failed += 1; } }
+#define TEST_RESULT(input, result) \
+    { char in[] = input; tests += 1; Parser p; \
+      if (p.parse(in) != result) { printf("parser test #%d failed.\n", tests); failed += 1; } }
+
+#define TEST(input) TEST_RESULT(input, true)
+#define TEST_FAIL(input) TEST_RESULT(input, false)
 
 void run_parser_tests()
 {
@@ -457,7 +416,9 @@ void run_parser_tests()
     TEST("function f(int x) { g(15*x + 2); }")
     TEST("function f(int x, int y) -> int { if (x > y) return 1; else if (x < y) return -1; else return 0; }")
 
-    // TODO: Test cases that should fail.
+    TEST_FAIL("function f(); { g(15*3 + 2); }")
+    // TODO: More test cases that should fail.
+    // TODO: Parser shouldn't automatically print errors (?)
 
     printf("ran %d parser tests: %d succeeded, %d failed.\n", tests, tests - failed, failed);
 }
