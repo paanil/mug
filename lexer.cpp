@@ -22,6 +22,11 @@ const char *Token::get_str(Token::Type type)
     return token_str[type];
 }
 
+bool Token::is_type(Token::Type type)
+{
+    return (Token::INT <= type && type <= BOOL);
+}
+
 
 //
 // Keywords hash table

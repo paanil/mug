@@ -62,6 +62,7 @@ struct Token
 #undef PASTE_TT
 
     static const char *get_str(Type type);
+    static bool is_type(Type type);
 
     Type type;
     int line;

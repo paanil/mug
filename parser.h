@@ -1,7 +1,7 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include "lexer.h"
+#include "node_alloc.h"
 
 /*
 
@@ -12,8 +12,8 @@ statement := expression ';'
 statement := ident '=' expression ';'
 statement := type ident ('=' expression | <none>) ';'
 statement := return (expression | <none>) ';'
-statement := 'if' expression statement ('else' statement | <none>)
-statement := 'while' expression statement
+statement := 'if' '(' expression ')' statement ('else' statement | <none>)
+statement := 'while' '(' expression ')' statement
 statement := '{' statements '}'
 statement := 'function' ident '(' parameters ')' ('->' | <none>) '{' statements '}'
 type := 'int' | 'uint' | 'bool'
@@ -36,6 +36,13 @@ struct Parser
     Lexer lexer;
     Token token;
     Token next_token;
+    Node *current_node;
+    NodeAlloc a;
+    bool error;
+
+    Parser(Alloc &a_)
+    : a(a_)
+    {}
 
     Token::Type look_ahead();
     Token::Type peek();
@@ -43,7 +50,7 @@ struct Parser
 
     bool accept(Token::Type tt);
     bool expect(Token::Type tt);
-
+    void print_error(const char *message, const char *info);
     bool expected_operand_error(Token::Type for_op);
     bool expected_error(const char *what);
 
@@ -53,7 +60,8 @@ struct Parser
 
     bool parse_statement();
     bool parse_type();
-    bool parse_parameters();
+    bool parse_statements();
+    bool parse_parameters(ParamList &params);
 
     bool parse_expression();
     bool parse_and();
@@ -62,7 +70,7 @@ struct Parser
     bool parse_term();
     bool parse_prefixed_factor();
     bool parse_factor();
-    bool parse_arguments();
+    bool parse_arguments(ArgList &args);
 };
 
 void run_parser_tests();
