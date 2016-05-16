@@ -29,81 +29,13 @@ bool Token::is_type(Token::Type type)
 
 
 //
-// Keywords hash table
-//
-
-struct Keywords
-{
-    Lexer::HashItem *table;
-    int table_size;
-
-    template <int N>
-    Keywords(Lexer::HashItem (&table_)[N])
-    : table(table_)
-    , table_size(N)
-    {}
-
-    int hash_index(const char *s, int len)
-    {
-        // sdbm
-        uint64_t hash = 0;
-        for (int i = 0; i < len; i++)
-            hash = hash * 65599 + s[i];
-        return hash % table_size;
-    }
-
-    template <int N>
-    void add(const char (&keyword)[N], Token::Type token_type)
-    {
-        add(keyword, N - 1, token_type);
-    }
-
-    void add(const char *keyword, int keyword_len, Token::Type token_type)
-    {
-        int index = hash_index(keyword, keyword_len);
-
-        assert(table[index].kw == 0 && "bad hash function or too small hash table!");
-
-        table[index].kw = keyword;
-        table[index].tt = token_type;
-    }
-
-    bool s_equals_keyword(const char *s, const char *keyword, int n)
-    {
-        while (n--) if (*s++ != *keyword++) return false;
-        return (*keyword == 0);
-    }
-
-    Token::Type get_token_type(const char *s, int len)
-    {
-        int index = hash_index(s, len);
-        const char *keyword = table[index].kw;
-        if (keyword != 0 && s_equals_keyword(s, keyword, len))
-            return table[index].tt;
-//        if (keyword != 0)
-//        {
-//            printf("hash collision: h('");
-//            fwrite(s, 1, len, stdout);
-//            printf("' == h('%s')\n", keyword);
-//        }
-        return Token::IDENT;
-    }
-};
-
-
-//
 // Lexer
 //
 
-Lexer::Lexer(char *input_)
-: input(input_)
-, line(1)
-, column(0)
-, keyword_hash_table({})
+Lexer::Lexer()
 {
-    Keywords kws(keyword_hash_table);
 
-#define PASTE_TT(tt, ts) if (Token::IF <= Token::tt && Token::tt <= Token::FALSE) kws.add(ts, Token::tt);
+#define PASTE_TT(tt, ts) if (Token::IF <= Token::tt && Token::tt <= Token::FALSE) keyword_map.set(ts, Token::tt);
 
     PASTE_TTS
 
@@ -249,10 +181,10 @@ Token Lexer::next_token()
 
                         default:
                         {
-                            Keywords kws(keyword_hash_table);
-                            Token::Type tt = kws.get_token_type(text, len);
-                            if (tt == Token::IDENT)
+                            uint32_t idx = keyword_map.find(text, len);
+                            if (idx == ~0u)
                                 return ident_token(text, len);
+                            Token::Type tt = keyword_map.get(idx);
                             return make_token(tt);
                         }
                     }
@@ -309,7 +241,9 @@ Token Lexer::next_token()
 template <int N>
 int test_expected(char *input, Token::Type (&expected_tokens)[N])
 {
-    Lexer lexer(input);
+    Lexer lexer;
+    lexer.reset(input);
+
     for (int i = 0; i < N; i++)
     {
         Token::Type expected = expected_tokens[i];
@@ -326,7 +260,9 @@ int test_expected(char *input, Token::Type (&expected_tokens)[N])
 
 int test_invalid_token_at(char *input, int line, int column, char c)
 {
-    Lexer lexer(input);
+    Lexer lexer;
+    lexer.reset(input);
+
     Token token = lexer.next_token();
 
     while (token.type != Token::END)

@@ -12,7 +12,7 @@ struct NodeAlloc
     : a(a_)
     {}
 
-    Ident create_ident(const char *text, int len)
+    Ident make_ident(const char *text, int len)
     {
         char *ident = a.allocate_array<char>(len + 1);
         for (int i = 0; i < len; i++)
@@ -61,14 +61,14 @@ struct NodeAlloc
     Node *var_node(const char *text, int len)
     {
         NODE(VarNode, VAR);
-        node->name = create_ident(text, len);
+        node->name = make_ident(text, len);
         return (Node *)node;
     }
 
     Node *call_node(const char *text, int len, ArgList *args)
     {
         NODE(CallNode, CALL);
-        node->func_name = create_ident(text, len);
+        node->func_name = make_ident(text, len);
         node->args = args;
         return (Node *)node;
     }
@@ -110,7 +110,7 @@ struct NodeAlloc
     Node *assign_node(const char *text, int len, Node *value)
     {
         NODE(AssignNode, ASSIGN);
-        node->var_name = create_ident(text, len);
+        node->var_name = make_ident(text, len);
         node->value = value;
         return (Node *)node;
     }
@@ -119,7 +119,7 @@ struct NodeAlloc
     {
         NODE(DeclNode, DECL);
         node->var_type = type;
-        node->var_name = create_ident(text, len);
+        node->var_name = make_ident(text, len);
         node->init = init;
         return (Node *)node;
     }
@@ -160,7 +160,7 @@ struct NodeAlloc
     {
         NODE(FuncDefNode, FUNC_DEF);
         node->ret_type = ret_type;
-        node->name = create_ident(text, len);
+        node->name = make_ident(text, len);
         node->params = params;
         node->body = body;
         return (Node *)node;

@@ -76,7 +76,7 @@ bool Parser::expected_error(const char *what)
 
 bool Parser::parse(char *input)
 {
-    lexer = Lexer(input);
+    lexer.reset(input);
     get();
     get();
 
@@ -361,7 +361,7 @@ bool Parser::parse_parameters(ParamList &params)
 
         ParamList *param = a.alloc_param();
         param->type = type.type;
-        param->name = a.create_ident(ident.text, ident.len);
+        param->name = a.make_ident(ident.text, ident.len);
         param->next = 0;
         prev->next = param;
         prev = param;

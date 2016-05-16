@@ -1,7 +1,7 @@
 #ifndef LEXER_H
 #define LEXER_H
 
-#include <cstdint>
+#include "str_map.h"
 
 #define PASTE_TTS                   \
     PASTE_TT(END, "<end>")          \
@@ -91,11 +91,16 @@ struct Lexer
     char *input;
     int line;
     int column;
-    // NOTE: Prime numbers are propably good for hash tables.
-    HashItem keyword_hash_table[67];
+    StrMap<Token::Type> keyword_map;
 
-    Lexer() = default;
-    Lexer(char *input_);
+    Lexer();
+
+    void reset(char *input_)
+    {
+        input = input_;
+        line = 1;
+        column = 0;
+    }
 
     char peek();
     char get();

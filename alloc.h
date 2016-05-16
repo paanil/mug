@@ -31,7 +31,7 @@ struct Alloc
     {
         if (current + size > end)
         {
-            alloc_block(4*1024);
+            alloc_block(16*1024);
         }
 
         void *ptr = current;
