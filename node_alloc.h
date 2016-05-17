@@ -12,13 +12,12 @@ struct NodeAlloc
     : a(a_)
     {}
 
-    Ident make_ident(const char *text, int len)
+    Str push_str(Str s)
     {
-        char *ident = a.allocate_array<char>(len + 1);
-        for (int i = 0; i < len; i++)
-            ident[i] = text[i];
-        ident[len] = 0;
-        return (Ident){ ident };
+        char *data = a.allocate_array<char>(s.len + 1);
+        memcpy(data, s.data, s.len);
+        data[s.len] = 0;
+        return Str::make(data, s.len);
     }
 
     ArgList *alloc_arg()
@@ -58,17 +57,17 @@ struct NodeAlloc
         return (Node *)node;
     }
 
-    Node *var_node(const char *text, int len)
+    Node *var_node(Str ident)
     {
         NODE(VarNode, VAR);
-        node->name = make_ident(text, len);
+        node->name = push_str(ident);
         return (Node *)node;
     }
 
-    Node *call_node(const char *text, int len, ArgList *args)
+    Node *call_node(Str ident, ArgList *args)
     {
         NODE(CallNode, CALL);
-        node->func_name = make_ident(text, len);
+        node->func_name = push_str(ident);
         node->args = args;
         return (Node *)node;
     }
@@ -107,19 +106,19 @@ struct NodeAlloc
         return (Node *)node;
     }
 
-    Node *assign_node(const char *text, int len, Node *value)
+    Node *assign_node(Str ident, Node *value)
     {
         NODE(AssignNode, ASSIGN);
-        node->var_name = make_ident(text, len);
+        node->var_name = push_str(ident);
         node->value = value;
         return (Node *)node;
     }
 
-    Node *decl_node(Token::Type type, const char *text, int len, Node *init)
+    Node *decl_node(Token::Type type, Str ident, Node *init)
     {
         NODE(DeclNode, DECL);
         node->var_type = type;
-        node->var_name = make_ident(text, len);
+        node->var_name = push_str(ident);
         node->init = init;
         return (Node *)node;
     }
@@ -155,12 +154,12 @@ struct NodeAlloc
         return (Node *)node;
     }
 
-    Node *func_def_node(Token::Type ret_type, const char *text, int len,
+    Node *func_def_node(Token::Type ret_type, Str ident,
                         ParamList *params, Node *body)
     {
         NODE(FuncDefNode, FUNC_DEF);
         node->ret_type = ret_type;
-        node->name = make_ident(text, len);
+        node->name = push_str(ident);
         node->params = params;
         node->body = body;
         return (Node *)node;

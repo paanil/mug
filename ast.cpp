@@ -50,10 +50,10 @@ void print_node(Node *node)
         printf("%llu", node->constant.value);
         break;
     case NodeType_VAR:
-        printf("%s", node->var.name.text);
+        printf("%s", node->var.name.data);
         break;
     case NodeType_CALL:
-        printf("%s(", node->call.func_name.text);
+        printf("%s(", node->call.func_name.data);
         if (node->call.args)
         {
             ArgList *arg = node->call.args;
@@ -89,13 +89,13 @@ void print_node(Node *node)
         printf(";\n");
         break;
     case NodeType_ASSIGN:
-        printf("%s = ", node->assign.var_name.text);
+        printf("%s = ", node->assign.var_name.data);
         print_node(node->assign.value);
         printf(";\n");
         break;
     case NodeType_DECL:
         printf("%s %s", Token::get_str(node->decl.var_type),
-                        node->decl.var_name.text);
+                        node->decl.var_name.data);
         if (node->decl.init)
         {
             printf(" = ");
@@ -143,13 +143,13 @@ void print_node(Node *node)
     }
     case NodeType_FUNC_DEF:
     {
-        printf("function %s(", node->func_def.name.text);
+        printf("function %s(", node->func_def.name.data);
         if (node->func_def.params)
         {
             ParamList *param = node->func_def.params;
             while (true)
             {
-                printf("%s %s", Token::get_str(param->type), param->name.text);
+                printf("%s %s", Token::get_str(param->type), param->name.data);
                 param = param->next;
                 if (!param) break;
                 printf(", ");

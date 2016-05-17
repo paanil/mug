@@ -32,11 +32,6 @@ enum NodeType
     NodeType_FUNC_DEF,
 };
 
-struct Ident
-{
-    const char *text;
-};
-
 struct ArgList
 {
     struct Node *arg;
@@ -46,7 +41,7 @@ struct ArgList
 struct ParamList
 {
     Token::Type type;
-    Ident name;
+    Str name;
     ParamList *next;
 };
 
@@ -67,11 +62,11 @@ DEF_NODE(ConstNode)
 END_NODE
 
 DEF_NODE(VarNode)
-    Ident name;
+    Str name;
 END_NODE
 
 DEF_NODE(CallNode)
-    Ident func_name;
+    Str func_name;
     ArgList *args;
 END_NODE
 
@@ -93,13 +88,13 @@ DEF_NODE(ExprNode)
 END_NODE
 
 DEF_NODE(AssignNode)
-    Ident var_name;
+    Str var_name;
     struct Node *value;
 END_NODE
 
 DEF_NODE(DeclNode)
     Token::Type var_type;
-    Ident var_name;
+    Str var_name;
     struct Node *init;
 END_NODE
 
@@ -124,7 +119,7 @@ END_NODE
 
 DEF_NODE(FuncDefNode)
     Token::Type ret_type;
-    Ident name;
+    Str name;
     ParamList *params;
     struct Node *body;
 END_NODE

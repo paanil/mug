@@ -34,8 +34,7 @@ bool Token::is_type(Token::Type type)
 
 Lexer::Lexer()
 {
-
-#define PASTE_TT(tt, ts) if (Token::IF <= Token::tt && Token::tt <= Token::FALSE) keyword_map.set(ts, Token::tt);
+#define PASTE_TT(tt, ts) if (Token::IF <= Token::tt && Token::tt <= Token::FALSE) keyword_map.set(Str::make(ts), Token::tt);
 
     PASTE_TTS
 
@@ -62,11 +61,10 @@ Token Lexer::make_token(Token::Type type)
     return token;
 }
 
-Token Lexer::ident_token(char *text, int len)
+Token Lexer::ident_token(Str s)
 {
     Token token = make_token(Token::IDENT);
-    token.text = text;
-    token.len = len;
+    token.text = s;
     return token;
 }
 
@@ -164,7 +162,7 @@ Token Lexer::next_token()
             case 'A'...'Z':
             {
                 int len = 0;
-                char *text = input;
+                const char *text = input;
 
                 while (true)
                 {
@@ -181,9 +179,10 @@ Token Lexer::next_token()
 
                         default:
                         {
-                            uint32_t idx = keyword_map.find(text, len);
-                            if (idx == ~0u)
-                                return ident_token(text, len);
+                            Str s = Str::make(text, len);
+                            uint32_t idx = keyword_map.find(s);
+                            if (idx == NOT_FOUND)
+                                return ident_token(s);
                             Token::Type tt = keyword_map.get(idx);
                             return make_token(tt);
                         }
@@ -239,7 +238,7 @@ Token Lexer::next_token()
 //
 
 template <int N>
-int test_expected(char *input, Token::Type (&expected_tokens)[N])
+int test_expected(const char *input, Token::Type (&expected_tokens)[N])
 {
     Lexer lexer;
     lexer.reset(input);
@@ -258,7 +257,7 @@ int test_expected(char *input, Token::Type (&expected_tokens)[N])
     return 0;
 }
 
-int test_invalid_token_at(char *input, int line, int column, char c)
+int test_invalid_token_at(const char *input, int line, int column, char c)
 {
     Lexer lexer;
     lexer.reset(input);
@@ -288,7 +287,7 @@ int test_invalid_token_at(char *input, int line, int column, char c)
 }
 
 #define TEST(test_func, input, ...) \
-    { char in[] = input; tests += 1; if (test_func(in, ##__VA_ARGS__) != 0) { printf("lexer test #%d failed.\n", tests); failed += 1; } }
+    { tests += 1; if (test_func(input, ##__VA_ARGS__) != 0) { printf("lexer test #%d failed.\n", tests); failed += 1; } }
 
 #define TT_LIST(tt) Token::tt
 #define TT_LIST_2(tt, tt2) TT_LIST(tt), TT_LIST(tt2)

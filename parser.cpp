@@ -74,7 +74,7 @@ bool Parser::expected_error(const char *what)
 // Parsing
 //
 
-bool Parser::parse(char *input)
+bool Parser::parse(const char *input)
 {
     lexer.reset(input);
     get();
@@ -121,8 +121,7 @@ bool Parser::parse_statement()
     {
         if (look_ahead() == Token::ASSIGN)
         {
-            int len = token.len;
-            char *text = token.text;
+            Str ident = token.text;
 
             expect(Token::IDENT);
             expect(Token::ASSIGN);
@@ -133,7 +132,7 @@ bool Parser::parse_statement()
             if (!expect(Token::SEMICOLON))
                 return false;
 
-            current_node = a.assign_node(text, len, current_node);
+            current_node = a.assign_node(ident, current_node);
             return true;
         }
     }
@@ -171,7 +170,7 @@ bool Parser::parse_statement()
         if (!expect(Token::SEMICOLON))
             return false;
 
-        current_node = a.decl_node(type.type, ident.text, ident.len, init);
+        current_node = a.decl_node(type.type, ident.text, init);
         return true;
     }
 
@@ -302,7 +301,7 @@ bool Parser::parse_statement()
         if (!expect(Token::RBRACE))
             return false;
 
-        current_node = a.func_def_node(ret_type.type, ident.text, ident.len, params.next, current_node);
+        current_node = a.func_def_node(ret_type.type, ident.text, params.next, current_node);
         return true;
     }
 
@@ -361,7 +360,7 @@ bool Parser::parse_parameters(ParamList &params)
 
         ParamList *param = a.alloc_param();
         param->type = type.type;
-        param->name = a.make_ident(ident.text, ident.len);
+        param->name = a.push_str(ident.text);
         param->next = 0;
         prev->next = param;
         prev = param;
@@ -455,11 +454,11 @@ bool Parser::parse_factor()
                     return false;
             }
 
-            current_node = a.call_node(tmp.text, tmp.len, args.next);
+            current_node = a.call_node(tmp.text, args.next);
             return true;
         }
 
-        current_node = a.var_node(tmp.text, tmp.len);
+        current_node = a.var_node(tmp.text);
         return true;
     }
 
@@ -500,8 +499,8 @@ bool Parser::parse_arguments(ArgList &args)
 //
 
 #define TEST_RESULT(input, result) \
-    { Alloc a; char in[] = input; tests += 1; Parser p(a); \
-      if (p.parse(in) != result) { printf("parser test #%d failed.\n", tests); failed += 1; } }
+    { Alloc a; tests += 1; Parser p(a); \
+      if (p.parse(input) != result) { printf("parser test #%d failed.\n", tests); failed += 1; } }
 
 #define TEST(input) TEST_RESULT(input, true)
 #define TEST_FAIL(input) TEST_RESULT(input, false)

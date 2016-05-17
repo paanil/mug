@@ -9,25 +9,24 @@
 struct Str
 {
     uint32_t hash;
-    int len;
+    int32_t len;
     const char *data;
 
-    Str()
-    : hash()
-    , len()
-    , data()
-    { }
-    Str(const char *s)
+    static Str make(const char *s)
     {
-        len = strlen(s);
-        data = s;
-        hash = compute_hash(data, len);
+        Str str;
+        str.len = strlen(s);
+        str.data = s;
+        str.hash = compute_hash(str.data, str.len);
+        return str;
     }
-    Str(const char *s, int n)
+    static Str make(const char *s, int len)
     {
-        len = n;
-        data = s;
-        hash = compute_hash(data, len);
+        Str str;
+        str.len = len;
+        str.data = s;
+        str.hash = compute_hash(str.data, str.len);
+        return str;
     }
 
     static uint64_t compute_hash(const char *s, int n)
@@ -48,6 +47,7 @@ struct Str
 
 
 #define MAX_PROBE 8
+#define NOT_FOUND (~0u)
 
 template <class ValueT>
 struct StrMap
@@ -135,25 +135,18 @@ struct StrMap
                 return index;
         }
 
-        return ~0u;
+        return NOT_FOUND;
     }
 
-    uint32_t find(const char *key)
+    uint32_t find(Str key)
     {
-        return _find(Str(key));
+        return _find(key);
     }
 
-    uint32_t find(const char *key, int len)
+    void set(Str key, const ValueT &value)
     {
-        return _find(Str(key, len));
-    }
-
-    void set(const char *key, const ValueT &value)
-    {
-        Str k = Str(key);
-        uint32_t index = _find(k);
-
-        if (index == ~0u) _add(k, value);
+        uint32_t index = _find(key);
+        if (index == NOT_FOUND) _add(key, value);
         else table[index].value = value;
     }
 

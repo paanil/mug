@@ -71,31 +71,21 @@ struct Token
     union
     {
         uint64_t value;
-        struct
-        {
-            char *text;
-            int len;
-        };
+        Str text;
         char c;
     };
 };
 
 struct Lexer
 {
-    struct HashItem
-    {
-        const char *kw;
-        Token::Type tt;
-    };
-
-    char *input;
+    const char *input;
     int line;
     int column;
     StrMap<Token::Type> keyword_map;
 
     Lexer();
 
-    void reset(char *input_)
+    void reset(const char *input_)
     {
         input = input_;
         line = 1;
@@ -106,7 +96,7 @@ struct Lexer
     char get();
 
     Token make_token(Token::Type type);
-    Token ident_token(char *text, int len);
+    Token ident_token(Str s);
     Token const_token(uint64_t value);
     Token invalid_token(char c);
 
