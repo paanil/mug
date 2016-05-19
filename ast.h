@@ -2,6 +2,7 @@
 #define AST_H
 
 #include "lexer.h"
+#include "type.h"
 
 #define DEF_NODE(Name) \
 struct Name { \
@@ -9,6 +10,8 @@ struct Name { \
 
 #define END_NODE \
 };
+
+// TODO: Separate expression and statement.
 
 enum NodeType
 {
@@ -40,7 +43,7 @@ struct ArgList
 
 struct ParamList
 {
-    Token::Type type;
+    Type type;
     Str name;
     ParamList *next;
 };
@@ -93,7 +96,7 @@ DEF_NODE(AssignNode)
 END_NODE
 
 DEF_NODE(DeclNode)
-    Token::Type var_type;
+    Type var_type;
     Str var_name;
     struct Node *init;
 END_NODE
@@ -118,7 +121,7 @@ DEF_NODE(BlockNode)
 END_NODE
 
 DEF_NODE(FuncDefNode)
-    Token::Type ret_type;
+    Type ret_type;
     Str name;
     ParamList *params;
     struct Node *body;
@@ -152,5 +155,11 @@ struct Node
 };
 
 void print_node(Node *node);
+
+struct Ast
+{
+    Node *root;
+    bool valid;
+};
 
 #endif // AST_H

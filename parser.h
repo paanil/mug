@@ -54,7 +54,7 @@ struct Parser
     bool expected_operand_error(Token::Type for_op);
     bool expected_error(const char *what);
 
-    bool parse(const char *input);
+    Ast parse(const char *input);
 
     bool parse_top_level();
 

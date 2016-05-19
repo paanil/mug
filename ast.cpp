@@ -94,7 +94,8 @@ void print_node(Node *node)
         printf(";\n");
         break;
     case NodeType_DECL:
-        printf("%s %s", Token::get_str(node->decl.var_type),
+        // TODO: Type string.
+        printf("%s %s", "<type>"/*Token::get_str(node->decl.var_type)*/,
                         node->decl.var_name.data);
         if (node->decl.init)
         {
@@ -149,15 +150,17 @@ void print_node(Node *node)
             ParamList *param = node->func_def.params;
             while (true)
             {
-                printf("%s %s", Token::get_str(param->type), param->name.data);
+                // TODO: Type string.
+                printf("%s %s", "<type>"/*Token::get_str(param->type)*/, param->name.data);
                 param = param->next;
                 if (!param) break;
                 printf(", ");
             }
         }
         printf(") ");
-        if (node->func_def.ret_type > 0)
-            printf("-> %s ", Token::get_str(node->func_def.ret_type));
+        if (node->func_def.ret_type.type != Type::VOID)
+            // TODO: Type string.
+            printf("-> %s ", "<type>"/*Token::get_str(node->func_def.ret_type)*/);
         print_node(node->func_def.body);
         break;
     }

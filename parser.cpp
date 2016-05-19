@@ -74,7 +74,7 @@ bool Parser::expected_error(const char *what)
 // Parsing
 //
 
-bool Parser::parse(const char *input)
+Ast Parser::parse(const char *input)
 {
     lexer.reset(input);
     get();
@@ -83,11 +83,12 @@ bool Parser::parse(const char *input)
     current_node = 0;
     error = false;
 
-    bool result = false;
+    Ast result = {};
 
     if (parse_top_level())
     {
-        result = true;
+        result.root = current_node;
+        result.valid = true;
     }
 
     return result;
@@ -348,7 +349,7 @@ bool Parser::parse_parameters(ParamList &params)
 
     do
     {
-        Token type = token;
+//        Token type = token;
 
         if (!parse_type())
             return expected_error("parameter type after ','");
@@ -359,7 +360,7 @@ bool Parser::parse_parameters(ParamList &params)
             return false;
 
         ParamList *param = a.alloc_param();
-        param->type = type.type;
+        param->type = (Type){Type::INT};//type.type; //TODO: Something.
         param->name = a.push_str(ident.text);
         param->next = 0;
         prev->next = param;
@@ -500,7 +501,7 @@ bool Parser::parse_arguments(ArgList &args)
 
 #define TEST_RESULT(input, result) \
     { Alloc a; tests += 1; Parser p(a); \
-      if (p.parse(input) != result) { printf("parser test #%d failed.\n", tests); failed += 1; } }
+      if (p.parse(input).valid != result) { printf("parser test #%d failed.\n", tests); failed += 1; } }
 
 #define TEST(input) TEST_RESULT(input, true)
 #define TEST_FAIL(input) TEST_RESULT(input, false)
@@ -535,7 +536,19 @@ void run_parser_tests()
 
     TEST_FAIL("function f(); { g(15*3 + 2); }")
     TEST_FAIL("{if}")
-    // TODO: More test cases that should fail.
+    TEST_FAIL("1")
+    TEST_FAIL("1+;")
+    TEST_FAIL("if 5 > 4 ;")
+    TEST_FAIL("if (3 & 1) ;")
+    TEST_FAIL("while true {}")
+    TEST_FAIL("((3 + 5) * 2;")
+    TEST_FAIL("function g(int x) -> int;")
+    TEST_FAIL("int uint32;")
+    TEST_FAIL("3 = 4;")
+    TEST_FAIL("1 != 2 && x = 4;")
+    TEST_FAIL("{if(true){}else;")
+    TEST_FAIL("{if(true){}else}")
+    TEST_FAIL("int x,y,z;")
     // TODO: Parser shouldn't automatically print errors (?)
 
     printf("ran %d parser tests: %d succeeded, %d failed.\n", tests, tests - failed, failed);

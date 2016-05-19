@@ -117,7 +117,7 @@ struct NodeAlloc
     Node *decl_node(Token::Type type, Str ident, Node *init)
     {
         NODE(DeclNode, DECL);
-        node->var_type = type;
+        node->var_type = (Type){Type::INT};//type; //TODO: Something.
         node->var_name = push_str(ident);
         node->init = init;
         return (Node *)node;
@@ -158,7 +158,7 @@ struct NodeAlloc
                         ParamList *params, Node *body)
     {
         NODE(FuncDefNode, FUNC_DEF);
-        node->ret_type = ret_type;
+        node->ret_type = (Type){Type::INT};//ret_type; // TODO: Something.
         node->name = push_str(ident);
         node->params = params;
         node->body = body;
