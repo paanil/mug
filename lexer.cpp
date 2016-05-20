@@ -250,7 +250,7 @@ int test_expected(const char *input, Token::Type (&expected_tokens)[N])
 
         if (got != expected)
         {
-            printf("expected '%s', got '%s'\n", Token::get_str(expected), Token::get_str(got));
+            fprintf(stderr, "expected '%s', got '%s'\n", Token::get_str(expected), Token::get_str(got));
             return 1;
         }
     }
@@ -287,7 +287,7 @@ int test_invalid_token_at(const char *input, int line, int column, char c)
 }
 
 #define TEST(test_func, input, ...) \
-    { tests += 1; if (test_func(input, ##__VA_ARGS__) != 0) { printf("lexer test #%d failed.\n", tests); failed += 1; } }
+    { tests += 1; if (test_func(input, ##__VA_ARGS__) != 0) { fprintf(stderr, "lexer test #%d failed.\n", tests); failed += 1; } }
 
 #define TT_LIST(tt) Token::tt
 #define TT_LIST_2(tt, tt2) TT_LIST(tt), TT_LIST(tt2)
@@ -336,5 +336,5 @@ void run_lexer_tests()
          "asdf 56 + - 8\n \tint32 x = y * 9841 + 463;\nqwer ||9 if¤\ntruefalse true false;",
          3, 12, '¤')
 
-    printf("ran %d lexer tests: %d succeeded, %d failed.\n", tests, tests - failed, failed);
+    fprintf(stdout, "ran %d lexer tests: %d succeeded, %d failed.\n", tests, tests - failed, failed);
 }

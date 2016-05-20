@@ -4,11 +4,11 @@
 #include "alloc.h"
 #include "ast.h"
 
-struct NodeAlloc
+struct AstAlloc
 {
     Alloc &a;
 
-    NodeAlloc(Alloc &a_)
+    AstAlloc(Alloc &a_)
     : a(a_)
     {}
 
@@ -35,63 +35,61 @@ struct NodeAlloc
         return a.allocate<StmtList>();
     }
 
-#define NODE(Type, NType) \
-    Type *node = a.allocate<Type>(); \
-    node->type = NodeType_##NType
+#define EXPRESSION(T, Type) \
+    T *exp = a.allocate<T>(); \
+    exp->type = ExpType_##Type
 
-    //
-    // Expressions
-    //
-
-    Node *bool_node(bool value)
+    Expression *bool_exp(bool value)
     {
-        NODE(BoolNode, BOOL);
-        node->value = value;
-        return (Node *)node;
+        EXPRESSION(BoolExp, BOOL);
+        exp->value = value;
+        exp->data_type.type = Type::BOOL;
+        return (Expression *)exp;
     }
 
-    Node *const_node(uint64_t value)
+    Expression *const_exp(uint64_t value)
     {
-        NODE(ConstNode, CONST);
-        node->value = value;
-        return (Node *)node;
+        EXPRESSION(ConstExp, CONST);
+        exp->value = value;
+        exp->data_type.type = Type::UINT;
+        return (Expression *)exp;
     }
 
-    Node *var_node(Str ident)
+    Expression *var_exp(Str ident)
     {
-        NODE(VarNode, VAR);
-        node->name = push_str(ident);
-        return (Node *)node;
+        EXPRESSION(VarExp, VAR);
+        exp->name = push_str(ident);
+        return (Expression *)exp;
     }
 
-    Node *call_node(Str ident, ArgList *args)
+    Expression *call_exp(Str ident, ArgList *args)
     {
-        NODE(CallNode, CALL);
-        node->func_name = push_str(ident);
-        node->args = args;
-        return (Node *)node;
+        EXPRESSION(CallExp, CALL);
+        exp->func_name = push_str(ident);
+        exp->args = args;
+        return (Expression *)exp;
     }
 
-    Node *unary_node(Node *operand, Token::Type op)
+    Expression *unary_exp(Expression *operand, Token::Type op)
     {
-        NODE(UnaryNode, UNARY);
-        node->operand = operand;
-        node->op = op;
-        return (Node *)node;
+        EXPRESSION(UnaryExp, UNARY);
+        exp->operand = operand;
+        exp->op = op;
+        return (Expression *)exp;
     }
 
-    Node *binary_node(Node *left, Node *right, Token::Type op)
+    Expression *binary_exp(Expression *left, Expression *right, Token::Type op)
     {
-        NODE(BinaryNode, BINARY);
-        node->left = left;
-        node->right = right;
-        node->op = op;
-        return (Node *)node;
+        EXPRESSION(BinaryExp, BINARY);
+        exp->left = left;
+        exp->right = right;
+        exp->op = op;
+        return (Expression *)exp;
     }
 
-    //
-    // Statements
-    //
+#define NODE(T, Type) \
+    T *node = a.allocate<T>(); \
+    node->type = NodeType_##Type
 
     Node *empty_node()
     {
@@ -99,14 +97,14 @@ struct NodeAlloc
         return node;
     }
 
-    Node *expr_node(Node *expr)
+    Node *exp_node(Expression *exp)
     {
-        NODE(ExprNode, EXPR);
-        node->expr = expr;
+        NODE(ExpNode, EXP);
+        node->exp = exp;
         return (Node *)node;
     }
 
-    Node *assign_node(Str ident, Node *value)
+    Node *assign_node(Str ident, Expression *value)
     {
         NODE(AssignNode, ASSIGN);
         node->var_name = push_str(ident);
@@ -114,23 +112,23 @@ struct NodeAlloc
         return (Node *)node;
     }
 
-    Node *decl_node(Token::Type type, Str ident, Node *init)
+    Node *decl_node(Type type, Str ident, Expression *init)
     {
         NODE(DeclNode, DECL);
-        node->var_type = (Type){Type::INT};//type; //TODO: Something.
+        node->var_type = type;
         node->var_name = push_str(ident);
         node->init = init;
         return (Node *)node;
     }
 
-    Node *return_node(Node *ret_val)
+    Node *return_node(Expression *ret_val)
     {
         NODE(ReturnNode, RETURN);
         node->value = ret_val;
         return (Node *)node;
     }
 
-    Node *if_node(Node *condition, Node *true_stmt, Node *else_stmt)
+    Node *if_node(Expression *condition, Node *true_stmt, Node *else_stmt)
     {
         NODE(IfNode, IF);
         node->condition = condition;
@@ -139,7 +137,7 @@ struct NodeAlloc
         return (Node *)node;
     }
 
-    Node *while_node(Node *condition, Node *stmt)
+    Node *while_node(Expression *condition, Node *stmt)
     {
         NODE(WhileNode, WHILE);
         node->condition = condition;
@@ -154,11 +152,10 @@ struct NodeAlloc
         return (Node *)node;
     }
 
-    Node *func_def_node(Token::Type ret_type, Str ident,
-                        ParamList *params, Node *body)
+    Node *func_def_node(Type ret_type, Str ident, ParamList *params, Node *body)
     {
         NODE(FuncDefNode, FUNC_DEF);
-        node->ret_type = (Type){Type::INT};//ret_type; // TODO: Something.
+        node->ret_type = ret_type;
         node->name = push_str(ident);
         node->params = params;
         node->body = body;

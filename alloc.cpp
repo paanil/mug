@@ -26,7 +26,7 @@ void Alloc::free_all()
         block = next;
     }
 
-    blocks = 0;
-    current = 0;
-    end = 0;
+    blocks = nullptr;
+    current = nullptr;
+    end = nullptr;
 }

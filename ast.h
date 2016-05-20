@@ -4,6 +4,14 @@
 #include "lexer.h"
 #include "type.h"
 
+#define DEF_EXP(Name) \
+struct Name { \
+    ExpType type; \
+    Type data_type;
+
+#define END_EXP \
+};
+
 #define DEF_NODE(Name) \
 struct Name { \
     NodeType type;
@@ -11,21 +19,21 @@ struct Name { \
 #define END_NODE \
 };
 
-// TODO: Separate expression and statement.
+enum ExpType
+{
+    ExpType_BOOL,
+    ExpType_CONST,
+    ExpType_VAR,
+    ExpType_CALL,
+    ExpType_UNARY,
+    ExpType_BINARY,
+};
 
+// statements TODO: Rename?
 enum NodeType
 {
-    // expressions
-    NodeType_BOOL,
-    NodeType_CONST,
-    NodeType_VAR,
-    NodeType_CALL,
-    NodeType_UNARY,
-    NodeType_BINARY,
-
-    // statements
     NodeType_EMPTY,
-    NodeType_EXPR,
+    NodeType_EXP,
     NodeType_ASSIGN,
     NodeType_DECL,
     NodeType_RETURN,
@@ -37,7 +45,7 @@ enum NodeType
 
 struct ArgList
 {
-    struct Node *arg;
+    struct Expression *arg;
     ArgList *next;
 };
 
@@ -56,63 +64,63 @@ struct StmtList
 
 // expressions
 
-DEF_NODE(BoolNode)
+DEF_EXP(BoolExp)
     bool value;
-END_NODE
+END_EXP
 
-DEF_NODE(ConstNode)
+DEF_EXP(ConstExp)
     uint64_t value;
-END_NODE
+END_EXP
 
-DEF_NODE(VarNode)
+DEF_EXP(VarExp)
     Str name;
-END_NODE
+END_EXP
 
-DEF_NODE(CallNode)
+DEF_EXP(CallExp)
     Str func_name;
     ArgList *args;
-END_NODE
+END_EXP
 
-DEF_NODE(UnaryNode)
-    struct Node *operand;
-    Token::Type op;
-END_NODE
+DEF_EXP(UnaryExp)
+    struct Expression *operand;
+    Token::Type op; // TODO: Replace with unary op enum?
+END_EXP
 
-DEF_NODE(BinaryNode)
-    struct Node *left;
-    struct Node *right;
-    Token::Type op;
-END_NODE
+DEF_EXP(BinaryExp)
+    struct Expression *left;
+    struct Expression *right;
+    Token::Type op; // TODO: Replace with binary op enum?
+END_EXP
 
 // statements
 
-DEF_NODE(ExprNode)
-    struct Node *expr;
+DEF_NODE(ExpNode)
+    struct Expression *exp;
 END_NODE
 
 DEF_NODE(AssignNode)
     Str var_name;
-    struct Node *value;
+    struct Expression *value;
 END_NODE
 
 DEF_NODE(DeclNode)
     Type var_type;
     Str var_name;
-    struct Node *init;
+    struct Expression *init;
 END_NODE
 
 DEF_NODE(ReturnNode)
-    struct Node *value;
+    struct Expression *value;
 END_NODE
 
 DEF_NODE(IfNode)
-    struct Node *condition;
+    struct Expression *condition;
     struct Node *true_stmt;
     struct Node *else_stmt;
 END_NODE
 
 DEF_NODE(WhileNode)
-    struct Node *condition;
+    struct Expression *condition;
     struct Node *stmt;
 END_NODE
 
@@ -129,21 +137,33 @@ END_NODE
 
 //
 
+struct Expression
+{
+    union
+    {
+        struct
+        {
+            ExpType type;
+            Type data_type;
+        };
+
+        BoolExp     boolean;
+        ConstExp    constant;
+        VarExp      var;
+        CallExp     call;
+        UnaryExp    unary;
+        BinaryExp   binary;
+    };
+};
+
+// TODO: Rename?
 struct Node
 {
     union
     {
-        // expressions
         NodeType    type;
-        BoolNode    boolean;
-        ConstNode   constant;
-        VarNode     var;
-        CallNode    call;
-        UnaryNode   unary;
-        BinaryNode  binary;
 
-        // statements
-        ExprNode    expr;
+        ExpNode     exp;
         AssignNode  assign;
         DeclNode    decl;
         ReturnNode  ret;

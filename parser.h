@@ -36,8 +36,7 @@ struct Parser
     Lexer lexer;
     Token token;
     Token next_token;
-    Node *current_node;
-    NodeAlloc a;
+    AstAlloc a;
     bool error;
 
     Parser(Alloc &a_)
@@ -51,25 +50,25 @@ struct Parser
     bool accept(Token::Type tt);
     bool expect(Token::Type tt);
     void print_error(const char *message, const char *info);
-    bool expected_operand_error(Token::Type for_op);
-    bool expected_error(const char *what);
+    void expected_operand_error(Token::Type for_op);
+    void expected_error(const char *what);
 
     Ast parse(const char *input);
 
-    bool parse_top_level();
+    Node *parse_top_level();
 
-    bool parse_statement();
-    bool parse_type();
-    bool parse_statements();
+    Node *parse_statement();
+    Node *parse_statements();
+    bool parse_type(Type *result);
     bool parse_parameters(ParamList &params);
 
-    bool parse_expression();
-    bool parse_and();
-    bool parse_comparison();
-    bool parse_sum();
-    bool parse_term();
-    bool parse_prefixed_factor();
-    bool parse_factor();
+    Expression *parse_expression();
+    Expression *parse_and();
+    Expression *parse_comparison();
+    Expression *parse_sum();
+    Expression *parse_term();
+    Expression *parse_prefixed_factor();
+    Expression *parse_factor();
     bool parse_arguments(ArgList &args);
 };
 

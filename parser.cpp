@@ -50,24 +50,22 @@ void Parser::print_error(const char *message, const char *info)
         int line = token.line;
         int column = token.column;
 
-        printf("error:%d:%d: ", line, column);
-        printf(message, info);
-        printf("\n");
+        fprintf(stderr, "error:%d:%d: ", line, column);
+        fprintf(stderr, message, info);
+        fprintf(stderr, "\n");
 
         error = true;
     }
 }
 
-bool Parser::expected_operand_error(Token::Type for_op)
+void Parser::expected_operand_error(Token::Type for_op)
 {
     print_error("expected operand for '%s'", Token::get_str(for_op));
-    return false;
 }
 
-bool Parser::expected_error(const char *what)
+void Parser::expected_error(const char *what)
 {
     print_error("expected %s", what);
-    return false;
 }
 
 //
@@ -80,40 +78,32 @@ Ast Parser::parse(const char *input)
     get();
     get();
 
-    current_node = 0;
     error = false;
 
-    Ast result = {};
-
-    if (parse_top_level())
-    {
-        result.root = current_node;
-        result.valid = true;
-    }
-
+    Ast result;
+    result.root = parse_top_level();
+    result.valid = result.root != nullptr;
     return result;
 }
 
-bool Parser::parse_top_level()
+Node *Parser::parse_top_level()
 {
-    if (!parse_statements())
-        return false;
+    Node *statements = parse_statements();
+    if (statements == nullptr)
+        return nullptr;
 
     if (accept(Token::END))
-        return true;
+        return statements;
 
     print_error("unexpected token '%s'", Token::get_str(token.type));
-    return false;
+    return nullptr;
 }
 
-bool Parser::parse_statement()
+Node *Parser::parse_statement()
 {
     // empty statement
     if (accept(Token::SEMICOLON))
-    {
-        current_node = a.empty_node();
-        return true;
-    }
+        return a.empty_node();
 
     // NOTE: Assign must be before expression!
     // assign statement
@@ -127,216 +117,241 @@ bool Parser::parse_statement()
             expect(Token::IDENT);
             expect(Token::ASSIGN);
 
-            if (!parse_expression())
-                return expected_error("expression after '='");
+            Expression *value = parse_expression();
+            if (value == nullptr)
+            {
+                expected_error("expression after '='");
+                return nullptr;
+            }
 
             if (!expect(Token::SEMICOLON))
-                return false;
+                return nullptr;
 
-            current_node = a.assign_node(ident, current_node);
-            return true;
+            return a.assign_node(ident, value);
         }
     }
 
     // expression statement
-    if (parse_expression())
+    Expression *exp = parse_expression();
+    if (exp != nullptr)
     {
         if (!expect(Token::SEMICOLON))
-            return false;
+            return nullptr;
 
-        current_node = a.expr_node(current_node);
-        return true;
+        return a.exp_node(exp);
     }
 
     // variable declaration
-    Token type = token;
-    if (parse_type())
+    Type type;
+    if (parse_type(&type))
     {
-        Token ident = token;
+        Str ident = token.text;
 
         if (!expect(Token::IDENT))
-            return false;
+            return nullptr;
 
-        Node *init = 0;
+        Expression *init = nullptr;
 
         // variable init
         if (accept(Token::ASSIGN))
         {
-            if (!parse_expression())
-                return expected_error("expression after '='");
-
-            init = current_node;
+            init = parse_expression();
+            if (init == nullptr)
+            {
+                expected_error("expression after '='");
+                return nullptr;
+            }
         }
 
         if (!expect(Token::SEMICOLON))
-            return false;
+            return nullptr;
 
-        current_node = a.decl_node(type.type, ident.text, init);
-        return true;
+        return a.decl_node(type, ident, init);
     }
 
     // return statement
     if (accept(Token::RETURN))
     {
-        Node *ret_val = 0;
+        Expression *ret_val = nullptr;
 
         if (peek() != Token::SEMICOLON)
         {
-            if (!parse_expression())
-                return expected_error("return value");
-
-            ret_val = current_node;
+            ret_val = parse_expression();
+            if (ret_val == nullptr)
+            {
+                expected_error("return value");
+                return nullptr;
+            }
         }
 
         if (!expect(Token::SEMICOLON))
-            return false;
+            return nullptr;
 
-        current_node = a.return_node(ret_val);
-        return true;
+        return a.return_node(ret_val);
     }
 
     // if statement
     if (accept(Token::IF))
     {
         if (!expect(Token::LPAREN))
-            return false;
+            return nullptr;
 
-        if (!parse_expression())
-            return expected_error("condition in parentheses");
+        Expression *condition = parse_expression();
+        if (condition == nullptr)
+        {
+            expected_error("condition in parentheses");
+            return nullptr;
+        }
 
         if (!expect(Token::RPAREN))
-            return false;
+            return nullptr;
 
-        Node *condition = current_node;
+        Node *true_stmt = parse_statement();
+        if (true_stmt == nullptr)
+        {
+            expected_error("statement for if");
+            return nullptr;
+        }
 
-        if (!parse_statement())
-            return expected_error("statement for if");
-
-        Node *true_stmt = current_node;
-        Node *else_stmt = 0;
+        Node *else_stmt = nullptr;
 
         // else
         if (accept(Token::ELSE))
         {
-            if (!parse_statement())
-                return expected_error("else statement");
-
-            else_stmt = current_node;
+            else_stmt = parse_statement();
+            if (else_stmt == nullptr)
+            {
+                expected_error("else statement");
+                return nullptr;
+            }
         }
 
-        current_node = a.if_node(condition, true_stmt, else_stmt);
-        return true;
+        return a.if_node(condition, true_stmt, else_stmt);
     }
 
     // while statement
     if (accept(Token::WHILE))
     {
         if (!expect(Token::LPAREN))
-            return false;
+            return nullptr;
 
-        if (!parse_expression())
-            return expected_error("condition in parentheses");
+        Expression *condition = parse_expression();
+        if (condition == nullptr)
+        {
+            expected_error("condition in parentheses");
+            return nullptr;
+        }
 
         if (!expect(Token::RPAREN))
-            return false;
+            return nullptr;
 
-        Node *condition = current_node;
+        Node *stmt = parse_statement();
+        if (stmt == nullptr)
+        {
+            expected_error("statement for while");
+            return nullptr;
+        }
 
-        if (!parse_statement())
-            return expected_error("statement for while");
-
-        current_node = a.while_node(condition, current_node);
-        return true;
+        return a.while_node(condition, stmt);
     }
 
     // statement block
     if (accept(Token::LBRACE))
     {
-        if (!parse_statements())
-            return false;
+        Node *statements = parse_statements();
+        if (statements == nullptr)
+            return nullptr;
 
         if (!expect(Token::RBRACE))
-            return false;
+            return nullptr;
 
-        return true;
+        return statements;
     }
 
     // function definition
     if (accept(Token::FUNCTION))
     {
-        Token ident = token;
+        Str ident = token.text;
 
         if (!expect(Token::IDENT))
-            return false;
+            return nullptr;
 
         if (!expect(Token::LPAREN))
-            return false;
+            return nullptr;
 
         ParamList params = {};
 
         if (!accept(Token::RPAREN))
         {
             if (!parse_parameters(params))
-                return false;
+                return nullptr;
 
             if (!expect(Token::RPAREN))
-                return false;
+                return nullptr;
         }
 
-        Token ret_type = {};
+        Type ret_type = {};
 
         if (accept(Token::ARROW))
         {
-            ret_type = token;
-
-            if (!parse_type())
-                return expected_error("return type after '->'");
+            if (!parse_type(&ret_type))
+            {
+                expected_error("return type after '->'");
+                return nullptr;
+            }
         }
 
         if (!expect(Token::LBRACE))
-            return false;
+            return nullptr;
 
-        if (!parse_statements())
-            return false;
+        Node *statements = parse_statements();
+        if (statements == nullptr)
+            return nullptr;
 
         if (!expect(Token::RBRACE))
-            return false;
+            return nullptr;
 
-        current_node = a.func_def_node(ret_type.type, ident.text, params.next, current_node);
-        return true;
+        return a.func_def_node(ret_type, ident, params.next, statements);
     }
 
-    return false;
+    return nullptr;
 }
 
-bool Parser::parse_type()
-{
-    if (Token::is_type(peek()))
-    {
-        get();
-        return true;
-    }
-    return false;
-}
-
-bool Parser::parse_statements()
+Node *Parser::parse_statements()
 {
     StmtList stmts = {};
     StmtList *prev = &stmts;
 
-    while (parse_statement())
+    for (Node *s; (s = parse_statement()) != nullptr; )
     {
         StmtList *stmt = a.alloc_stmt();
-        stmt->stmt = current_node;
-        stmt->next = 0;
+        stmt->stmt = s;
+        stmt->next = nullptr;
         prev->next = stmt;
         prev = stmt;
     }
 
     if (error)
-        return false;
+        return nullptr;
 
-    current_node = a.block_node(stmts.next);
+    return a.block_node(stmts.next);
+}
+
+bool Parser::parse_type(Type *result)
+{
+    switch (peek())
+    {
+    case Token::INT...Token::INT64:
+        result->type = Type::INT; break;
+    case Token::UINT...Token::UINT64:
+        result->type = Type::UINT; break;
+    case Token::BOOL:
+        result->type = Type::BOOL; break;
+    default:
+        return false;
+    }
+
+    get();
     return true;
 }
 
@@ -349,20 +364,21 @@ bool Parser::parse_parameters(ParamList &params)
 
     do
     {
-//        Token type = token;
+        Type type = {};
+        if (!parse_type(&type))
+        {
+            expected_error("parameter type after ','");
+            return false;
+        }
 
-        if (!parse_type())
-            return expected_error("parameter type after ','");
-
-        Token ident = token;
-
+        Str ident = token.text;
         if (!expect(Token::IDENT))
             return false;
 
         ParamList *param = a.alloc_param();
-        param->type = (Type){Type::INT};//type.type; //TODO: Something.
-        param->name = a.push_str(ident.text);
-        param->next = 0;
+        param->type = type;
+        param->name = a.push_str(ident);
+        param->next = nullptr;
         prev->next = param;
         prev = param;
     } while (accept(Token::COMMA));
@@ -381,14 +397,18 @@ inline bool accept_any(Parser *p, Token::Type tt, Args... args)
 { return (p->accept(tt) || accept_any(p, args...)); }
 
 #define PARSE_BINOP(func_name, parse_operand_func, ...) \
-bool Parser::func_name() { \
-    if (!parse_operand_func()) return false; \
+Expression *Parser::func_name() { \
+    Expression *left = parse_operand_func(); \
+    if (left == nullptr) return nullptr; \
     while (true) { \
         Token::Type op = token.type; \
-        if (!accept_any(this, __VA_ARGS__)) return true; \
-        Node *left = current_node; \
-        if (!parse_operand_func()) return expected_operand_error(op); \
-        current_node = a.binary_node(left, current_node, op); \
+        if (!accept_any(this, __VA_ARGS__)) return left; \
+        Expression *right = parse_operand_func(); \
+        if (right == nullptr) { \
+            expected_operand_error(op); \
+            return nullptr; \
+        } \
+        left = a.binary_exp(left, right, op); \
     } \
 }
 
@@ -399,47 +419,41 @@ PARSE_BINOP(parse_sum, parse_term, Token::PLUS, Token::MINUS)
 PARSE_BINOP(parse_term, parse_prefixed_factor, Token::STAR, Token::SLASH)
 
 //
-// Factors
+//
 //
 
-bool Parser::parse_prefixed_factor()
+Expression *Parser::parse_prefixed_factor()
 {
     Token::Type op = token.type;
 
     if (accept(Token::NOT) ||
         accept(Token::MINUS))
     {
-        if (!parse_factor())
-            return false;
+        Expression *operand = parse_factor();
+        if (operand == nullptr)
+        {
+            expected_operand_error(op);
+            return nullptr;
+        }
 
-        current_node = a.unary_node(current_node, op);
-        return true;
+        return a.unary_exp(operand, op);
     }
 
     return parse_factor();
 }
 
-bool Parser::parse_factor()
+Expression *Parser::parse_factor()
 {
-    Token tmp = token;
-
     if (accept(Token::TRUE))
-    {
-        current_node = a.bool_node(true);
-        return true;
-    }
+        return a.bool_exp(true);
     if (accept(Token::FALSE))
-    {
-        current_node = a.bool_node(false);
-        return true;
-    }
+        return a.bool_exp(false);
 
+    uint64_t value = token.value;
     if (accept(Token::CONST))
-    {
-        current_node = a.const_node(tmp.value);
-        return true;
-    }
+        return a.const_exp(value);
 
+    Str ident = token.text;
     if (accept(Token::IDENT))
     {
         if (accept(Token::LPAREN))
@@ -449,29 +463,31 @@ bool Parser::parse_factor()
             if (!accept(Token::RPAREN))
             {
                 if (!parse_arguments(args))
-                    return false;
+                    return nullptr;
 
                 if (!expect(Token::RPAREN))
-                    return false;
+                    return nullptr;
             }
 
-            current_node = a.call_node(tmp.text, args.next);
-            return true;
+            return a.call_exp(ident, args.next);
         }
 
-        current_node = a.var_node(tmp.text);
-        return true;
+        return a.var_exp(ident);
     }
 
     if (accept(Token::LPAREN))
     {
-        if (!parse_expression())
-            return expected_error("expression in parentheses");
+        Expression *exp = parse_expression();
+        if (exp == nullptr)
+        {
+            expected_error("expression in parentheses");
+            return nullptr;
+        }
 
-        return expect(Token::RPAREN);
+        return expect(Token::RPAREN) ? exp : nullptr;
     }
 
-    return false;
+    return nullptr;
 }
 
 bool Parser::parse_arguments(ArgList &args)
@@ -480,12 +496,16 @@ bool Parser::parse_arguments(ArgList &args)
 
     do
     {
-        if (!parse_expression())
-            return expected_error("argument");
+        Expression *argument = parse_expression();
+        if (argument == nullptr)
+        {
+            expected_error("argument");
+            return false;
+        }
 
         ArgList *arg = a.alloc_arg();
-        arg->arg = current_node;
-        arg->next = 0;
+        arg->arg = argument;
+        arg->next = nullptr;
         prev->next = arg;
         prev = arg;
 
@@ -500,8 +520,8 @@ bool Parser::parse_arguments(ArgList &args)
 //
 
 #define TEST_RESULT(input, result) \
-    { Alloc a; tests += 1; Parser p(a); \
-      if (p.parse(input).valid != result) { printf("parser test #%d failed.\n", tests); failed += 1; } }
+    { Alloc a; tests += 1; Parser p(a); Ast ast = p.parse(input); \
+      if (ast.valid != result) { fprintf(stderr, "parser test #%d failed.\n", tests); failed += 1; } }
 
 #define TEST(input) TEST_RESULT(input, true)
 #define TEST_FAIL(input) TEST_RESULT(input, false)
@@ -551,5 +571,5 @@ void run_parser_tests()
     TEST_FAIL("int x,y,z;")
     // TODO: Parser shouldn't automatically print errors (?)
 
-    printf("ran %d parser tests: %d succeeded, %d failed.\n", tests, tests - failed, failed);
+    fprintf(stdout, "ran %d parser tests: %d succeeded, %d failed.\n", tests, tests - failed, failed);
 }
