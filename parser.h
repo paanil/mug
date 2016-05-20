@@ -1,7 +1,7 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include "node_alloc.h"
+#include "ast_alloc.h"
 
 /*
 

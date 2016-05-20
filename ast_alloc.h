@@ -1,5 +1,5 @@
-#ifndef NODE_ALLOC_H
-#define NODE_ALLOC_H
+#ifndef AST_ALLOC_H
+#define AST_ALLOC_H
 
 #include "alloc.h"
 #include "ast.h"
@@ -163,4 +163,4 @@ struct AstAlloc
     }
 };
 
-#endif // NODE_ALLOC_H
+#endif // AST_ALLOC_H
