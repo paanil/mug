@@ -2,6 +2,7 @@
 #define PARSER_H
 
 #include "ast_alloc.h"
+#include "error_context.h"
 
 /*
 
@@ -37,10 +38,12 @@ struct Parser
     Token token;
     Token next_token;
     AstAlloc a;
+    ErrorContext ec;
     bool error;
 
-    Parser(Alloc &a_)
+    Parser(Alloc &a_, ErrorContext &ec_)
     : a(a_)
+    , ec(ec_)
     {}
 
     Token::Type look_ahead();

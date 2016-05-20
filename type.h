@@ -12,6 +12,15 @@ struct Type
     };
 
     Enum type;
+
+    bool operator == (Type t)
+    {
+        return (type == t.type);
+    }
+    bool operator != (Type t)
+    {
+        return !(*this == t);
+    }
 };
 
 #endif // TYPE_H

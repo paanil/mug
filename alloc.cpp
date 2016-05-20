@@ -1,9 +1,18 @@
 #include "alloc.h"
 
 #include <cstdlib>
+#include <cassert>
 
+char *Alloc::align(char *ptr, uint32_t alignment)
+{
+    uintptr_t uptr = (uintptr_t)ptr;
+    uintptr_t mask = alignment - 1;
+    assert(alignment && (alignment & mask) == 0);
+    uptr = (uptr + mask) & ~mask;
+    return (char *)uptr;
+}
 
-void Alloc::alloc_block(unsigned size)
+void Alloc::alloc_block(uint32_t size)
 {
     void *memory = malloc(size);
 

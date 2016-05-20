@@ -1,12 +1,5 @@
 #include "parser.h"
 
-#include <cstdio>
-
-
-//
-// Parser
-//
-
 Token::Type Parser::look_ahead()
 {
     return next_token.type;
@@ -45,17 +38,8 @@ bool Parser::expect(Token::Type tt)
 
 void Parser::print_error(const char *message, const char *info)
 {
-    if (!error)
-    {
-        int line = token.line;
-        int column = token.column;
-
-        fprintf(stderr, "error:%d:%d: ", line, column);
-        fprintf(stderr, message, info);
-        fprintf(stderr, "\n");
-
-        error = true;
-    }
+    ec.print_error(token.line, token.column, message, info);
+    error = true;
 }
 
 void Parser::expected_operand_error(Token::Type for_op)
@@ -519,9 +503,11 @@ bool Parser::parse_arguments(ArgList &args)
 // Parser tests
 //
 
+#include <cstdio>
+
 #define TEST_RESULT(input, result) \
-    { Alloc a; Parser p(a); Ast ast = p.parse(input); tests += 1; \
-      if (ast.valid != result) { fprintf(stderr, "parser test #%d failed.\n", tests); failed += 1; } }
+    { Alloc a; ErrorContext ec(result ? 1 : 0); Parser p(a, ec); Ast ast = p.parse(input); tests += 1; \
+      if (ast.valid != result) { fprintf(stderr, "parser test #%d failed.\n\n", tests); failed += 1; } }
 
 #define TEST(input) TEST_RESULT(input, true)
 #define TEST_FAIL(input) TEST_RESULT(input, false)
@@ -530,6 +516,8 @@ void run_parser_tests()
 {
     int tests = 0;
     int failed = 0;
+
+    fprintf(stdout, "running parser tests...\n");
 
     TEST(";")
     TEST("1+1-2;")
@@ -574,5 +562,6 @@ void run_parser_tests()
     TEST_FAIL("function h(int x, y) {}")
     // TODO: Parser shouldn't automatically print errors (?)
 
-    fprintf(stdout, "ran %d parser tests: %d succeeded, %d failed.\n", tests, tests - failed, failed);
+    fprintf(stdout, "------------------------------\n");
+    fprintf(stdout, "ran %d parser tests: %d succeeded, %d failed.\n\n\n", tests, tests - failed, failed);
 }
