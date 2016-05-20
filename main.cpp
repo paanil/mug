@@ -45,8 +45,17 @@ bool type_check(Expression *exp, SymTable *sym)
             return true;
         }
         case ExpType_UNARY:
+            if (!type_check(exp->unary.operand, sym))
+                return false;
+            // TODO: Check type is bool if op is not, etc.
+            return true;
         case ExpType_BINARY:
-            return false;
+            if (!type_check(exp->binary.left, sym))
+                return false;
+            if (!type_check(exp->binary.right, sym))
+                return false;
+            // TODO: Check op and operand compatibility.
+            return true;
     }
 
     return false;
@@ -83,7 +92,18 @@ bool type_check(Node *node, SymTable *sym)
     case NodeType_RETURN:
     case NodeType_IF:
     case NodeType_WHILE:
+        return false;
     case NodeType_BLOCK:
+    {
+        StmtList *s = node->block.stmts;
+        while (s)
+        {
+            if (!type_check(s->stmt, sym))
+                return false;
+            s = s->next;
+        }
+        return true;
+    }
     case NodeType_FUNC_DEF:
         return false;
     }
@@ -101,15 +121,38 @@ bool type_check(Ast ast)
     return type_check(ast.root, &sym);
 }
 
+#define TEST_RESULT(input, result) \
+    { Alloc a; Parser p(a); Ast ast = p.parse(input); tests += 1; \
+      if (type_check(ast) != result) { fprintf(stderr, "type check test #%d failed.\n", tests); failed += 1; } }
+
+#define TEST(input) TEST_RESULT(input, true)
+#define TEST_FAIL(input) TEST_RESULT(input, false)
+
 void run_type_check_tests()
 {
-    Alloc a;
-    Parser p(a);
-    Ast ast = p.parse("42;");
-    if (!type_check(ast))
-    {
-        fprintf(stderr, "my glob\n");
-    }
+    int tests = 0;
+    int failed = 0;
+
+    TEST("42;")
+    TEST("-42;")
+    TEST("42 + 5;")
+
+    TEST_FAIL("x;") // fail
+    TEST_FAIL("x + 13;") // fail
+    TEST_FAIL("int x = x + 5;") // fail
+    TEST_FAIL("f();") // fail
+    TEST_FAIL("f() * 11;") // fail
+    TEST_FAIL("f(25);") // fail
+
+    TEST("int x;")
+    TEST("int x; x + 13;")
+    TEST("int x = 2; x * 7;")
+    TEST("function f() { int x = -31; } f();")
+    TEST_FAIL("function f() { int x = -31; } int x = f() * 11;") // fail
+    TEST_FAIL("function f(int y) { int x = -31; } int x = f() * 11;") // fail
+    TEST("function f() -> int { return 5 * 9; } int x = f() * 11;")
+
+    fprintf(stdout, "ran %d type check tests: %d succeeded, %d failed.\n", tests, tests - failed, failed);
 }
 
 int main()

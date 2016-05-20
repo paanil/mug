@@ -49,6 +49,7 @@ struct Parser
 
     bool accept(Token::Type tt);
     bool expect(Token::Type tt);
+
     void print_error(const char *message, const char *info);
     void expected_operand_error(Token::Type for_op);
     void expected_error(const char *what);

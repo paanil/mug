@@ -520,7 +520,7 @@ bool Parser::parse_arguments(ArgList &args)
 //
 
 #define TEST_RESULT(input, result) \
-    { Alloc a; tests += 1; Parser p(a); Ast ast = p.parse(input); \
+    { Alloc a; Parser p(a); Ast ast = p.parse(input); tests += 1; \
       if (ast.valid != result) { fprintf(stderr, "parser test #%d failed.\n", tests); failed += 1; } }
 
 #define TEST(input) TEST_RESULT(input, true)
@@ -569,6 +569,9 @@ void run_parser_tests()
     TEST_FAIL("{if(true){}else;")
     TEST_FAIL("{if(true){}else}")
     TEST_FAIL("int x,y,z;")
+    TEST_FAIL("function h(3+5) {}")
+    TEST_FAIL("function h(int 5) {}")
+    TEST_FAIL("function h(int x, y) {}")
     // TODO: Parser shouldn't automatically print errors (?)
 
     fprintf(stdout, "ran %d parser tests: %d succeeded, %d failed.\n", tests, tests - failed, failed);
