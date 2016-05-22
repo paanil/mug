@@ -32,7 +32,7 @@ bool can_cast(Type from, Type to)
 
 struct Checker
 {
-    SymTable sym;
+    SymTable<Type> sym;
     ErrorContext &ec;
 
     Checker(ErrorContext &ec_)

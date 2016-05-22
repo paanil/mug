@@ -5,11 +5,12 @@
 #include "stack.h"
 #include "type.h"
 
+template <class ValueT>
 struct SymTable
 {
     struct Entry
     {
-        Type type;
+        ValueT value;
         uint32_t scope;
     };
 
@@ -31,11 +32,11 @@ struct SymTable
     , stash()
     { }
 
-    bool has(Str symbol, Type *result)
+    bool has(Str symbol, ValueT *result)
     {
         uint32_t idx = table.find(symbol);
         if (idx == NOT_FOUND) return false;
-        *result = table.get(idx).type;
+        *result = table.get(idx).value;
         return true;
     }
 
@@ -46,7 +47,7 @@ struct SymTable
         return (table.get(idx).scope == scope_id);
     }
 
-    void put(Str symbol, Type type)
+    void put(Str symbol, const ValueT &value)
     {
         uint32_t idx = table.find(symbol);
         if (idx == NOT_FOUND)
@@ -61,8 +62,14 @@ struct SymTable
             stash.push(item);
         }
 
-        Entry entry = { type, scope_id };
+        Entry entry = { value, scope_id };
         table.set(symbol, entry);
+    }
+
+    ValueT get(Str symbol)
+    {
+        uint32_t idx = table.find(symbol);
+        return table.get(idx).value;
     }
 
     void enter_scope()

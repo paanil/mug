@@ -1,9 +1,410 @@
+#include "ast.h"
+#include "sym_table.h"
+
+#include <cstdio>
+#include <cassert>
+
+struct IR
+{
+    enum Type
+    {
+        MOV_IM, // mov immediate
+        MOV, // mov temp
+        MUL,
+        ADD,
+        SUB,
+        EQ,
+        LT,
+        JMP,
+        JZ,
+    };
+
+    static const char *get_str(Type type)
+    {
+        static const char *ir_str[] =
+        {
+            "MOV_IM",
+            "MOV",
+            "MUL",
+            "ADD",
+            "SUB",
+            "EQ",
+            "LT",
+            "JMP",
+            "JZ",
+        };
+
+        return ir_str[type];
+    }
+};
+
+struct Temp
+{
+    int id;
+};
+
+union Operand
+{
+    Temp temp;
+    int jump;
+    uint64_t int_value;
+};
+
+struct Quad
+{
+    IR::Type op;
+    Operand target;
+    Operand left;
+    Operand right;
+
+    Quad()
+    {}
+
+    Quad(IR::Type op_)
+    : op(op_)
+    {}
+
+    Quad(IR::Type op_, Operand target_)
+    : op(op_)
+    , target(target_)
+    {}
+
+    Quad(IR::Type op_, Operand target_, Operand operand)
+    : op(op_)
+    , target(target_)
+    , left(operand)
+    {}
+
+    Quad(IR::Type op_, Operand target_, Operand left_, Operand right_)
+    : op(op_)
+    , target(target_)
+    , left(left_)
+    , right(right_)
+    {}
+};
+
+struct QuadRef
+{
+    int index;
+};
+
+struct Routine
+{
+    int n;
+    Quad quads[100];
+    int next_temp_id;
+
+    Routine()
+    : n()
+    , next_temp_id()
+    {}
+
+    Operand make_temp()
+    {
+        Operand result;
+        result.temp.id = next_temp_id++;
+        return result;
+    }
+
+    Operand make_jump_target()
+    {
+        Operand result;
+        result.jump = n;
+        return result;
+    }
+
+    QuadRef add(Quad quad)
+    {
+        assert(n < 100);
+        quads[n] = quad;
+        return (QuadRef){ n++ };
+    }
+
+    void set_jump_target_here(QuadRef quad)
+    {
+        assert(quad.index < n);
+        quads[quad.index].target.jump = n;
+    }
+};
+
+struct IRGen
+{
+    SymTable<Temp> sym;
+
+    Operand gen_ir(Routine &r, Expression *exp)
+    {
+        switch (exp->type)
+        {
+            case ExpType_BOOL:
+            {
+                Operand result = r.make_temp();
+                Operand operand;
+                operand.int_value = exp->boolean.value ? 1 : 0;
+                r.add(Quad(IR::MOV_IM, result, operand));
+                return result;
+            }
+
+            case ExpType_CONST:
+            {
+                Operand result = r.make_temp();
+                Operand operand;
+                operand.int_value = exp->constant.value;
+                r.add(Quad(IR::MOV_IM, result, operand));
+                return result;
+            }
+
+            case ExpType_VAR:
+            {
+                Operand result;
+                result.temp = sym.get(exp->var.name);
+                return result;
+            }
+
+            case ExpType_UNARY:
+            {
+                switch (exp->unary.op)
+                {
+//                    case UnaryOp_NEG:
+//                    {
+//
+//                    }
+
+                    case UnaryOp_NEG:
+                    {
+                        Operand right = gen_ir(r, exp->unary.operand);
+                        Operand left = r.make_temp();
+                        Operand result = r.make_temp();
+
+                        Operand zero;
+                        zero.int_value = 0;
+                        r.add(Quad(IR::MOV_IM, left, zero));
+
+                        r.add(Quad(IR::SUB, result, left, right));
+                        return result;
+                    }
+                }
+            }
+
+            case ExpType_BINARY:
+            {
+                Operand left = gen_ir(r, exp->binary.left);
+                Operand right = gen_ir(r, exp->binary.right);
+                Operand result = r.make_temp();
+
+                switch (exp->binary.op)
+                {
+                    case BinaryOp_MUL:
+                        r.add(Quad(IR::MUL, result, left, right));
+                        break;
+                    case BinaryOp_ADD:
+                        r.add(Quad(IR::ADD, result, left, right));
+                        break;
+                    case BinaryOp_SUB:
+                        r.add(Quad(IR::SUB, result, left, right));
+                        break;
+                    case BinaryOp_EQ:
+                        r.add(Quad(IR::EQ, result, left, right));
+                        break;
+                    case BinaryOp_LT:
+                        r.add(Quad(IR::LT, result, left, right));
+                        break;
+                }
+
+                return result;
+            }
+        }
+    }
+
+    void gen_ir(Routine &r, Node *node)
+    {
+        switch (node->type)
+        {
+            case NodeType_EMPTY:
+                break;
+            case NodeType_EXP:
+                gen_ir(r, node->exp.exp);
+                break;
+
+            case NodeType_ASSIGN:
+            {
+                Operand var;
+                var.temp = sym.get(node->assign.var_name);
+                Operand value = gen_ir(r, node->assign.value);
+                r.add(Quad(IR::MOV, var, value));
+                break;
+            }
+
+            case NodeType_DECL:
+            {
+                Operand var = r.make_temp();
+                sym.put(node->decl.var_name, var.temp);
+                if (node->decl.init)
+                {
+                    Operand init = gen_ir(r, node->decl.init);
+                    r.add(Quad(IR::MOV, var, init));
+                }
+                break;
+            }
+
+            case NodeType_IF:
+            {
+                Operand dummy_target;
+                Operand condition = gen_ir(r, node->if_stmt.condition);
+                QuadRef jz_quad = r.add(Quad(IR::JZ, dummy_target, condition));
+                gen_ir(r, node->if_stmt.true_stmt);
+                if (node->if_stmt.else_stmt)
+                {
+                    QuadRef jmp_quad = r.add(Quad(IR::JMP));
+                    r.set_jump_target_here(jz_quad);
+                    gen_ir(r, node->if_stmt.else_stmt);
+                    r.set_jump_target_here(jmp_quad);
+                }
+                else
+                {
+                    r.set_jump_target_here(jz_quad);
+                }
+                break;
+            }
+
+            case NodeType_WHILE:
+            {
+                Operand jump_target = r.make_jump_target();
+                Operand condition = gen_ir(r, node->while_stmt.condition);
+                QuadRef jz_quad = r.add(Quad(IR::JZ, {}, condition));
+                gen_ir(r, node->while_stmt.stmt);
+                r.add(Quad(IR::JMP, jump_target));
+                r.set_jump_target_here(jz_quad);
+                break;
+            }
+
+            case NodeType_BLOCK:
+            {
+                sym.enter_scope();
+
+                StmtList *s = node->block.stmts;
+                while (s)
+                {
+                    gen_ir(r, s->stmt);
+                    s = s->next;
+                }
+
+                sym.exit_scope();
+                break;
+            }
+
+//            case NodeType_FUNC_DEF:
+//            {
+//                sym.put(node->func_def.name, ???);
+//
+//                sym.enter_scope();
+//
+//                for (ParamList *p = node->func_def.params; p; p = p->next)
+//                    sym.put(p->name, ???);
+//
+//                gen_ir(node->func_def.body);
+//
+//                sym.exit_scope();
+//                break;
+//            }
+        }
+    }
+};
+
+void print_ir(Routine &r)
+{
+    for (int i = 0; i < r.n; i++)
+    {
+        Quad q = r.quads[i];
+
+        printf("%d \t%s \t", i, IR::get_str(q.op));
+
+        switch (q.op)
+        {
+        case IR::MOV_IM:
+            printf("temp%d \t%llu \t-\n", q.target.temp.id, q.left.int_value);
+            break;
+        case IR::MOV:
+            printf("temp%d \ttemp%d \t-\n", q.target.temp.id, q.left.temp.id);
+            break;
+        case IR::MUL:
+        case IR::ADD:
+        case IR::SUB:
+        case IR::EQ:
+        case IR::LT:
+            printf("temp%d \ttemp%d \ttemp%d\n", q.target.temp.id, q.left.temp.id, q.right.temp.id);
+            break;
+        case IR::JMP:
+            printf("%d \t- \t-\n", q.target.jump);
+            break;
+        case IR::JZ:
+            printf("%d \ttemp%d \t-\n", q.target.jump, q.left.temp.id);
+            break;
+        }
+    }
+}
+
+void gen_ir(Ast ast, const char *input)
+{
+    if (!ast.valid)
+    {
+        printf("ast not valid!");
+        return;
+    }
+
+    IRGen gen;
+
+    Routine top_level;
+    gen.gen_ir(top_level, ast.root);
+    printf("\"%s\"\n\n", input);
+    print_ir(top_level);
+    return;
+}
+
+
 #include "check.h"
 #include "parser.h"
 #include "alloc.h"
 #include "error_context.h"
 
 #include <cstdio>
+
+//
+// IR gen tests
+//
+
+#define TEST(input) { \
+    tests += 1; \
+    Alloc a; \
+    ErrorContext ec(1); \
+    Ast ast = parse(input, a, ec); \
+    gen_ir(ast, input); \
+}
+
+void run_ir_gen_tests()
+{
+    int tests = 0;
+    int failed = 0;
+
+    fprintf(stdout, "running ir gen tests...\n\n");
+
+//    TEST("5;")
+//    TEST("5 + 5;")
+//    TEST("int x = 5 + 5;")
+//    TEST("int x = 5 + 5; int y = x * 10;")
+//    TEST("int x; int y = 10; x = 5 + y;")
+//    TEST("int x = -5;")
+//    TEST("int x = 10 - 5;")
+//    TEST("bool result = (5 < 6);")
+//    TEST("bool result = false;")
+//    TEST("if (5 == 6) true;")
+//    TEST("int x = 0; if (5 == 6) { x = 5; } else { int y = 2; x = 5 * y; }")
+    TEST("int x = 1; int i = 0; while (i < 10) { x = x + x; i = i + 1; } int y = 5 * x;")
+
+    fprintf(stdout, "------------------------------\n");
+    fprintf(stdout, "ran %d ir gen tests: %d succeeded, %d failed.\n\n\n", tests, tests - failed, failed);
+}
+
+#undef TEST
 
 //
 // Static check tests
@@ -28,7 +429,7 @@ void run_static_check_tests()
     int tests = 0;
     int failed = 0;
 
-    fprintf(stdout, "running static check tests...\n");
+    fprintf(stdout, "running static check tests...\n\n");
 
     TEST("42;")
     TEST("-42;")
@@ -111,7 +512,7 @@ void run_parser_tests()
     int tests = 0;
     int failed = 0;
 
-    fprintf(stdout, "running parser tests...\n");
+    fprintf(stdout, "running parser tests...\n\n");
 
     TEST(";")
     TEST("1+1-2;")
@@ -235,7 +636,7 @@ void run_lexer_tests()
     int tests = 0;
     int failed = 0;
 
-    fprintf(stdout, "running lexer tests...\n");
+    fprintf(stdout, "running lexer tests...\n\n");
 
     {
         Token::Type expected_tokens[] = {
@@ -286,4 +687,5 @@ void run_tests()
     run_lexer_tests();
     run_parser_tests();
     run_static_check_tests();
+    run_ir_gen_tests();
 }
