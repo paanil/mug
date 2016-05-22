@@ -231,7 +231,7 @@ bool Checker::type_check(Node *node)
         case NodeType_ASSIGN:
         {
             Type sym_type;
-            if (sym.has(node->assign.var_name, &sym_type))
+            if (!sym.has(node->assign.var_name, &sym_type))
             {
                 ec.print_error("variable '%s' is not defined",
                                node->assign.var_name.data);
@@ -303,9 +303,31 @@ bool Checker::type_check(Node *node)
         }
 
         case NodeType_IF:
+            if (!type_check(node->if_stmt.condition))
+                return false;
+            if (!is_bool(node->if_stmt.condition))
+            {
+                ec.print_error("condition is not a boolean");
+                return false;
+            }
+            if (!type_check(node->if_stmt.true_stmt))
+                return false;
+            if (node->if_stmt.else_stmt)
+            {
+                if (!type_check(node->if_stmt.else_stmt))
+                    return false;
+            }
+            return true;
+
         case NodeType_WHILE:
-            // TODO: Implement.
-            return false;
+            if (!type_check(node->while_stmt.condition))
+                return false;
+            if (!is_bool(node->while_stmt.condition))
+            {
+                ec.print_error("condition is not a boolean");
+                return false;
+            }
+            return type_check(node->while_stmt.stmt);
 
         case NodeType_BLOCK:
         {

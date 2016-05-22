@@ -21,11 +21,6 @@ const char *Token::get_str(Token::Type type)
     return token_str[type];
 }
 
-bool Token::is_type(Token::Type type)
-{
-    return (Token::INT <= type && type <= BOOL);
-}
-
 
 //
 // Lexer
@@ -67,9 +62,16 @@ Token Lexer::ident_token(Str s)
     return token;
 }
 
-Token Lexer::const_token(uint64_t value)
+Token Lexer::intliteral_token(uint64_t value)
 {
-    Token token = make_token(Token::CONST);
+    Token token = make_token(Token::INT_LIT);
+    token.value = value;
+    return token;
+}
+
+Token Lexer::uintliteral_token(uint64_t value)
+{
+    Token token = make_token(Token::UINT_LIT);
     token.value = value;
     return token;
 }
@@ -205,8 +207,12 @@ Token Lexer::next_token()
                         case '0'...'9':
                             break;
 
+                        case 'u':
+                            get();
+                            return uintliteral_token(value);
+
                         default:
-                            return const_token(value);
+                            return intliteral_token(value);
                     }
                 }
 

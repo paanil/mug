@@ -368,7 +368,8 @@ bool Parser::parse_type(Type *result)
 
 bool Parser::parse_parameters(ParamList &params)
 {
-    if (!Token::is_type(peek()))
+    Token::Type tt = peek();
+    if (tt < Token::INT || Token::BOOL < tt)
         return true;
 
     ParamList *prev = &params;
@@ -461,8 +462,10 @@ Expression *Parser::parse_factor()
         return a.bool_exp(false);
 
     uint64_t value = token.value;
-    if (accept(Token::CONST))
-        return a.const_exp(value);
+    if (accept(Token::INT_LIT))
+        return a.const_exp(value, Type::INT);
+    if (accept(Token::UINT_LIT))
+        return a.const_exp(value, Type::UINT);
 
     Str ident = token.text;
     if (accept(Token::IDENT))

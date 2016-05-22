@@ -47,11 +47,11 @@ struct AstAlloc
         return (Expression *)exp;
     }
 
-    Expression *const_exp(uint64_t value)
+    Expression *const_exp(uint64_t value, Type::Enum type)
     {
         EXPRESSION(ConstExp, CONST);
         exp->value = value;
-        exp->data_type.type = Type::UINT;
+        exp->data_type.type = type;
         return (Expression *)exp;
     }
 

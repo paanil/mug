@@ -6,7 +6,7 @@
 #include <cstdio>
 
 //
-// Type check tests
+// Static check tests
 //
 
 #define TEST_RESULT(input, result) { \
@@ -15,7 +15,7 @@
     ErrorContext ec(result ? 1 : 0); \
     Ast ast = parse(input, a, ec); \
     if (check(ast, ec) != result) { \
-        fprintf(stderr, "type check test #%d failed.\n\n", tests); \
+        fprintf(stderr, "static check test #%d failed.\n\n", tests); \
         failed += 1; \
     } \
 }
@@ -23,47 +23,64 @@
 #define TEST(input) TEST_RESULT(input, true)
 #define TEST_FAIL(input) TEST_RESULT(input, false)
 
-void run_type_check_tests()
+void run_static_check_tests()
 {
     int tests = 0;
     int failed = 0;
 
-    fprintf(stdout, "running type check tests...\n");
+    fprintf(stdout, "running static check tests...\n");
 
-/*  1 */TEST("42;")
-/*  2 */TEST("-42;")
-/*  3 */TEST("42 + 5;")
-/*  4 */TEST("true == false;");
-/*  5 */TEST("10 < 5;")
-/*  6 */TEST("int x;")
-/*  7 */TEST("int x; x + 13;")
-/*  8 */TEST("int x = 2; x * 7;")
-/*  9 */TEST("int x = 10; x < 5;") // TODO: 5 -> signed, 5u -> unsigned
-/* 10 */TEST("int x; { uint x = 5; }")
-/* 11 */TEST("{ int x = 5; } bool x = false;")
-/* 12 */TEST("function f() { }")
-/* 13 */TEST("function f() -> bool { return true; }")
-/* 14 */TEST("function f(int x) -> int { return x * 9; } int x = f(3) * 11;")
-/* 15 */TEST("function f(int x) { int x = 5; return; }")
-/* 16 */TEST_FAIL("x;")
-/* 17 */TEST_FAIL("x + 13;")
-/* 18 */TEST_FAIL("int x = x + 5;")
-/* 19 */TEST_FAIL("int x; int x = 5;")
-/* 20 */TEST_FAIL("{ int x = 5; } x * 5;")
-/* 21 */TEST_FAIL("true == 10")
-/* 22 */TEST_FAIL("true >= false")
-/* 23 */TEST_FAIL("true * false")
-/* 24 */TEST_FAIL("f();")
-/* 25 */TEST_FAIL("return;")
-/* 26 */TEST_FAIL("return 10;")
-/* 27 */TEST_FAIL("function f() -> int {}")
-/* 28 */TEST_FAIL("function f() -> int { return; }")
-/* 29 */TEST_FAIL("function f() -> int { return true; }")
-/* 30 */TEST_FAIL("function f() { int x = -31; } int x = f() * 11;")
-/* 31 */TEST_FAIL("function f(int x) { return x * 9; } int x = f() * 11;")
+    TEST("42;")
+    TEST("-42;")
+    TEST("42 + 5;")
+    TEST("true == false;");
+    TEST("10 < 5;")
+    TEST("int x;")
+    TEST("int x; x + 13;")
+    TEST("int x = 2; x * 7;")
+    TEST("int x = 10; x < 5;")
+    TEST("int x; { uint x = 5; }")
+    TEST("{ int x = 5; } bool x = false;")
+    TEST("function f() { } f();")
+    TEST("function f() -> bool { return true; } f(); ")
+    TEST("function f(int x) -> int { return x * 9; } int x = f(3) * 11;")
+    TEST("function f(int x, int y) -> int { int x = 5; return x * y; } f(7, 9);")
+    TEST("int x = 5; bool result = (x == 5);")
+    TEST("int x = 25 / 7;"
+        "bool result = false;"
+        "if (x == 5) result = true;")
+    TEST("uint x = 25 / 7;"
+        "bool result;"
+        "if (x != 5u) { x = 5; result = false; }"
+        "else if (x != 10u) { x = 10; result = true; }")
+    TEST("int x = 0; while (true) x = x + 1;");
+    TEST("int x = 1; int i = 0; while (i < 10) { x = x + x; i = i + 1; }");
+    TEST("5 < 10; 10u > 5u;");
+
+    TEST_FAIL("x;")
+    TEST_FAIL("x + 13;")
+    TEST_FAIL("int x = x + 5;")
+    TEST_FAIL("int x; int x = 5;")
+    TEST_FAIL("{ int x = 5; } x * 5;")
+    TEST_FAIL("true == 10")
+    TEST_FAIL("true >= false")
+    TEST_FAIL("true * false")
+    TEST_FAIL("f();")
+    TEST_FAIL("return 10;")
+    TEST_FAIL("function f() -> int { return; }")
+    TEST_FAIL("function f() -> int { return true; }")
+    TEST_FAIL("function f() -> int { return 5; } f(10);")
+    TEST_FAIL("function f(int x, int y) -> int { return 10; } f(5);")
+    TEST_FAIL("function f() { int x = -31; } int x = f() * 11;")
+    TEST_FAIL("bool result = false; if (5) result = true;")
+    TEST_FAIL("if (true) x = 5;")
+    TEST_FAIL("if (true) 5 + 5; else return 5;")
+    TEST_FAIL("int x = 0; while (10) { int x = x + 1; }")
+    TEST_FAIL("while (false) { int x = 0; x = x + y; }")
+    TEST_FAIL("5 < 10u;")
 
     fprintf(stdout, "------------------------------\n");
-    fprintf(stdout, "ran %d type check tests: %d succeeded, %d failed.\n\n\n", tests, tests - failed, failed);
+    fprintf(stdout, "ran %d static check tests: %d succeeded, %d failed.\n\n\n", tests, tests - failed, failed);
 }
 
 #undef TEST_RESULT
@@ -227,19 +244,19 @@ void run_lexer_tests()
             TT_LIST_8(ARROW,LPAREN,RPAREN,LBRACE,RBRACE,COMMA,SEMICOLON,IF),
             TT_LIST_8(ELSE,WHILE,FUNCTION,RETURN,INT,INT8,INT16,INT32),
             TT_LIST_8(INT64,UINT,UINT8,UINT16,UINT32,UINT64,BOOL,TRUE),
-            TT_LIST_8(FALSE,IDENT,CONST,INVALID,END,END,END,END)
+            TT_LIST_8(FALSE,IDENT,INT_LIT,UINT_LIT,INVALID,END,END,END)
         };
 
         TEST(test_expected,
              "!*/+-&|==!=<><=>=&&||= // single line comment\n"
              "->(){},;"  "if else while function return /* multi\n  line\n  comment */"
-             "int int8 int16 int32 int64 uint uint8 uint16 uint32 uint64 bool true false asdf 12345 å",
+             "int int8 int16 int32 int64 uint uint8 uint16 uint32 uint64 bool true false asdf 12345 6789u å",
              expected_tokens)
     }
 
     {
         Token::Type expected_tokens[] = {
-            TT_LIST_8(IDENT,IDENT,IDENT,IDENT,IDENT,CONST,IDENT,IDENT),Token::END
+            TT_LIST_8(IDENT,IDENT,IDENT,IDENT,IDENT,INT_LIT,IDENT,IDENT),Token::END
         };
 
         TEST(test_expected,
@@ -268,5 +285,5 @@ void run_tests()
 {
     run_lexer_tests();
     run_parser_tests();
-    run_type_check_tests();
+    run_static_check_tests();
 }
