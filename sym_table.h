@@ -1,7 +1,9 @@
 #ifndef SYM_TABLE_H
 #define SYM_TABLE_H
 
+#include "str_map.h"
 #include "stack.h"
+#include "type.h"
 
 struct SymTable
 {

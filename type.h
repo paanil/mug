@@ -9,18 +9,25 @@ struct Type
         INT,
         UINT,
         BOOL,
+        FUNC,
     };
 
-    Enum type;
+    static const char *get_str(Type t)
+    {
+        static const char *type_str[] =
+        {
+            "void",
+            "int",
+            "uint",
+            "bool",
+            "function",
+        };
 
-    bool operator == (Type t)
-    {
-        return (type == t.type);
+        return type_str[t.type];
     }
-    bool operator != (Type t)
-    {
-        return !(*this == t);
-    }
+
+    Enum type;
+    struct FuncDefNode *func;
 };
 
 #endif // TYPE_H

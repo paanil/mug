@@ -103,6 +103,4 @@ struct Lexer
     Token next_token();
 };
 
-void run_lexer_tests();
-
 #endif // LEXER_H

@@ -74,7 +74,16 @@ struct AstAlloc
     {
         EXPRESSION(UnaryExp, UNARY);
         exp->operand = operand;
-        exp->op = op;
+
+        switch (op)
+        {
+        case Token::NOT:   exp->op = UnaryOp_NOT; break;
+        case Token::MINUS: exp->op = UnaryOp_NEG; break;
+        default:
+            assert(0 && "invalid code path!");
+            break;
+        }
+
         return (Expression *)exp;
     }
 
@@ -83,7 +92,26 @@ struct AstAlloc
         EXPRESSION(BinaryExp, BINARY);
         exp->left = left;
         exp->right = right;
-        exp->op = op;
+
+        switch (op)
+        {
+            case Token::STAR:  exp->op = BinaryOp_MUL; break;
+            case Token::SLASH: exp->op = BinaryOp_DIV; break;
+            case Token::PLUS:  exp->op = BinaryOp_ADD; break;
+            case Token::MINUS: exp->op = BinaryOp_SUB; break;
+            case Token::EQ:    exp->op = BinaryOp_EQ;  break;
+            case Token::NE:    exp->op = BinaryOp_NE;  break;
+            case Token::LT:    exp->op = BinaryOp_LT;  break;
+            case Token::GT:    exp->op = BinaryOp_GT;  break;
+            case Token::LE:    exp->op = BinaryOp_LE;  break;
+            case Token::GE:    exp->op = BinaryOp_GE;  break;
+            case Token::AND:   exp->op = BinaryOp_AND; break;
+            case Token::OR:    exp->op = BinaryOp_OR;  break;
+            default:
+                assert(0 && "invalid code path!");
+                break;
+        }
+
         return (Expression *)exp;
     }
 

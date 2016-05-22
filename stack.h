@@ -1,6 +1,10 @@
 #ifndef STACK_H
 #define STACK_H
 
+#include <cstdint>
+#include <cstdlib>
+#include <cassert>
+
 template <class T>
 struct Stack
 {

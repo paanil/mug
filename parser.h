@@ -1,8 +1,10 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include "ast_alloc.h"
-#include "error_context.h"
+#include "ast.h"
+
+struct Alloc;
+struct ErrorContext;
 
 /*
 
@@ -32,50 +34,6 @@ arguments := expression (',' arguments | <none>) | <none>
 
 */
 
-struct Parser
-{
-    Lexer lexer;
-    Token token;
-    Token next_token;
-    AstAlloc a;
-    ErrorContext ec;
-    bool error;
-
-    Parser(Alloc &a_, ErrorContext &ec_)
-    : a(a_)
-    , ec(ec_)
-    {}
-
-    Token::Type look_ahead();
-    Token::Type peek();
-    Token::Type get();
-
-    bool accept(Token::Type tt);
-    bool expect(Token::Type tt);
-
-    void print_error(const char *message, const char *info);
-    void expected_operand_error(Token::Type for_op);
-    void expected_error(const char *what);
-
-    Ast parse(const char *input);
-
-    Node *parse_top_level();
-
-    Node *parse_statement();
-    Node *parse_statements();
-    bool parse_type(Type *result);
-    bool parse_parameters(ParamList &params);
-
-    Expression *parse_expression();
-    Expression *parse_and();
-    Expression *parse_comparison();
-    Expression *parse_sum();
-    Expression *parse_term();
-    Expression *parse_prefixed_factor();
-    Expression *parse_factor();
-    bool parse_arguments(ArgList &args);
-};
-
-void run_parser_tests();
+Ast parse(const char *input, Alloc &a, ErrorContext &ec);
 
 #endif // PARSER_H

@@ -29,7 +29,28 @@ enum ExpType
     ExpType_BINARY,
 };
 
-// statements TODO: Rename?
+enum UnaryOp
+{
+    UnaryOp_NOT,
+    UnaryOp_NEG,
+};
+
+enum BinaryOp
+{
+    BinaryOp_MUL,
+    BinaryOp_DIV,
+    BinaryOp_ADD,
+    BinaryOp_SUB,
+    BinaryOp_EQ,
+    BinaryOp_NE,
+    BinaryOp_LT,
+    BinaryOp_GT,
+    BinaryOp_LE,
+    BinaryOp_GE,
+    BinaryOp_AND,
+    BinaryOp_OR,
+};
+
 enum NodeType
 {
     NodeType_EMPTY,
@@ -83,13 +104,13 @@ END_EXP
 
 DEF_EXP(UnaryExp)
     struct Expression *operand;
-    Token::Type op; // TODO: Replace with unary op enum?
+    UnaryOp op;
 END_EXP
 
 DEF_EXP(BinaryExp)
     struct Expression *left;
     struct Expression *right;
-    Token::Type op; // TODO: Replace with binary op enum?
+    BinaryOp op;
 END_EXP
 
 // statements
@@ -156,7 +177,6 @@ struct Expression
     };
 };
 
-// TODO: Rename?
 struct Node
 {
     union
@@ -173,6 +193,9 @@ struct Node
         FuncDefNode func_def;
     };
 };
+
+const char *UnaryOp_get_str(UnaryOp op);
+const char *BinaryOp_get_str(BinaryOp op);
 
 void print_node(Node *node);
 

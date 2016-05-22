@@ -1,8 +1,6 @@
 #ifndef ALLOC_H
 #define ALLOC_H
 
-#include <cstdint>
-
 struct Alloc
 {
     struct Block
@@ -26,12 +24,12 @@ struct Alloc
         free_all();
     }
 
-    char *align(char *ptr, uint32_t alignment);
+    char *align(char *ptr, unsigned alignment);
 
-    void alloc_block(uint32_t size);
+    void alloc_block(unsigned size);
     void free_all();
 
-    void *allocate(uint32_t size, uint32_t alignment)
+    void *allocate(unsigned size, unsigned alignment)
     {
         char *ptr = align(current, alignment);
 

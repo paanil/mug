@@ -1,60 +1,87 @@
 #include "parser.h"
+#include "ast_alloc.h"
+#include "error_context.h"
 
-Token::Type Parser::look_ahead()
+struct Parser
 {
-    return next_token.type;
-}
+    Lexer lexer;
+    Token token;
+    Token next_token;
+    AstAlloc a;
+    ErrorContext &ec;
+    bool error;
 
-Token::Type Parser::peek()
-{
-    return token.type;
-}
+    Parser(Alloc &a_, ErrorContext &ec_)
+    : a(a_)
+    , ec(ec_)
+    {}
 
-Token::Type Parser::get()
-{
-    token = next_token;
-    next_token = lexer.next_token();
-    return token.type;
-}
-
-bool Parser::accept(Token::Type tt)
-{
-    if (peek() == tt)
+    void print_error(const char *message, const char *info)
     {
-        get();
-        return true;
+        ec.print_error(token.line, token.column, message, info);
+        error = true;
     }
-    return false;
-}
+    void expected_operand_error(Token::Type for_op)
+    {
+        print_error("expected operand for '%s'", Token::get_str(for_op));
+    }
+    void expected_error(const char *what)
+    {
+        print_error("expected %s", what);
+    }
 
-bool Parser::expect(Token::Type tt)
-{
-    if (accept(tt))
-        return true;
+    Token::Type look_ahead()
+    {
+        return next_token.type;
+    }
+    Token::Type peek()
+    {
+        return token.type;
+    }
+    Token::Type get()
+    {
+        token = next_token;
+        next_token = lexer.next_token();
+        return token.type;
+    }
 
-    print_error("expected '%s'", Token::get_str(tt));
-    return false;
-}
+    bool accept(Token::Type tt)
+    {
+        if (peek() == tt)
+        {
+            get();
+            return true;
+        }
+        return false;
+    }
+    bool expect(Token::Type tt)
+    {
+        if (accept(tt))
+            return true;
 
-void Parser::print_error(const char *message, const char *info)
-{
-    ec.print_error(token.line, token.column, message, info);
-    error = true;
-}
+        print_error("expected '%s'", Token::get_str(tt));
+        return false;
+    }
 
-void Parser::expected_operand_error(Token::Type for_op)
-{
-    print_error("expected operand for '%s'", Token::get_str(for_op));
-}
+    Ast parse(const char *input);
 
-void Parser::expected_error(const char *what)
-{
-    print_error("expected %s", what);
-}
+    Node *parse_top_level();
 
-//
-// Parsing
-//
+    Node *parse_statement();
+    Node *parse_statements();
+    bool parse_type(Type *result);
+    bool parse_parameters(ParamList &params);
+
+    Expression *parse_expression();
+    Expression *parse_and();
+    Expression *parse_comparison();
+    Expression *parse_sum();
+    Expression *parse_term();
+    Expression *parse_prefixed_factor();
+    Expression *parse_factor();
+    bool parse_arguments(ArgList &args);
+};
+
 
 Ast Parser::parse(const char *input)
 {
@@ -500,68 +527,11 @@ bool Parser::parse_arguments(ArgList &args)
 
 
 //
-// Parser tests
+//
 //
 
-#include <cstdio>
-
-#define TEST_RESULT(input, result) \
-    { Alloc a; ErrorContext ec(result ? 1 : 0); Parser p(a, ec); Ast ast = p.parse(input); tests += 1; \
-      if (ast.valid != result) { fprintf(stderr, "parser test #%d failed.\n\n", tests); failed += 1; } }
-
-#define TEST(input) TEST_RESULT(input, true)
-#define TEST_FAIL(input) TEST_RESULT(input, false)
-
-void run_parser_tests()
+Ast parse(const char *input, Alloc &a, ErrorContext &ec)
 {
-    int tests = 0;
-    int failed = 0;
-
-    fprintf(stdout, "running parser tests...\n");
-
-    TEST(";")
-    TEST("1+1-2;")
-    TEST("1+1-2*9/4;")
-    TEST("1+1-2*9/(4+1);")
-    TEST("1+1-2*9/(4+1)*-3;")
-    TEST("9/(4+1)*-3 || !(2+6) && 0;")
-    TEST("0==1 || 2!=3 && 4<5 && 7>6 && 8<=8 && 9>=8;")
-    TEST("true == false;")
-    TEST("asdf + x * 42;")
-    TEST("f();")
-    TEST("g(32 * (2 + x), false, y);")
-    TEST("x = 30 + y;")
-    TEST("int x = -1; uint y = 1; bool z;")
-    TEST("return;")
-    TEST("return 3*x*x + 2*x + 1;")
-    TEST("if (x == false) f(5);")
-    TEST("if (x == false) f(5); else f(10);")
-    TEST("if (x == false) f(5); else if (y == true) f(10); else f(20);")
-    TEST("while (i < 10) { x = x + f(i); i = i + 1; }")
-    TEST("function f() { g(15*3 + 2); }")
-    TEST("function f(int x) { g(15*x + 2); }")
-    TEST("function f(int x, int y) -> int { if (x > y) return 1; else if (x < y) return -1; else return 0; }")
-
-    TEST_FAIL("function f(); { g(15*3 + 2); }")
-    TEST_FAIL("{if}")
-    TEST_FAIL("1")
-    TEST_FAIL("1+;")
-    TEST_FAIL("if 5 > 4 ;")
-    TEST_FAIL("if (3 & 1) ;")
-    TEST_FAIL("while true {}")
-    TEST_FAIL("((3 + 5) * 2;")
-    TEST_FAIL("function g(int x) -> int;")
-    TEST_FAIL("int uint32;")
-    TEST_FAIL("3 = 4;")
-    TEST_FAIL("1 != 2 && x = 4;")
-    TEST_FAIL("{if(true){}else;")
-    TEST_FAIL("{if(true){}else}")
-    TEST_FAIL("int x,y,z;")
-    TEST_FAIL("function h(3+5) {}")
-    TEST_FAIL("function h(int 5) {}")
-    TEST_FAIL("function h(int x, y) {}")
-    // TODO: Parser shouldn't automatically print errors (?)
-
-    fprintf(stdout, "------------------------------\n");
-    fprintf(stdout, "ran %d parser tests: %d succeeded, %d failed.\n\n\n", tests, tests - failed, failed);
+    Parser p(a, ec);
+    return p.parse(input);
 }

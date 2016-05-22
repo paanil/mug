@@ -23,6 +23,17 @@ void ErrorContext::print_error(const char *message, const char *info)
     errors++;
 }
 
+void ErrorContext::print_error(const char *message, const char *info1, const char *info2)
+{
+    if (errors < max_print)
+    {
+        fprintf(stderr, message, info1, info2);
+        fprintf(stderr, "\n");
+    }
+
+    errors++;
+}
+
 void ErrorContext::print_error(int line, int column,
                                const char *message, const char *info)
 {

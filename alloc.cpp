@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include <cassert>
 
-char *Alloc::align(char *ptr, uint32_t alignment)
+char *Alloc::align(char *ptr, unsigned alignment)
 {
     uintptr_t uptr = (uintptr_t)ptr;
     uintptr_t mask = alignment - 1;
@@ -12,7 +12,7 @@ char *Alloc::align(char *ptr, uint32_t alignment)
     return (char *)uptr;
 }
 
-void Alloc::alloc_block(uint32_t size)
+void Alloc::alloc_block(unsigned size)
 {
     void *memory = malloc(size);
 

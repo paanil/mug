@@ -13,6 +13,7 @@ struct ErrorContext
 
     void print_error(const char *message);
     void print_error(const char *message, const char *info);
+    void print_error(const char *message, const char *info1, const char *info2);
     void print_error(int line, int column, const char *message, const char *info);
 };
 
