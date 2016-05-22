@@ -49,7 +49,13 @@ struct SymTable
     void put(Str symbol, Type type)
     {
         uint32_t idx = table.find(symbol);
-        if (idx != NOT_FOUND)
+        if (idx == NOT_FOUND)
+        {
+            Stashed item = { symbol, {} };
+            item.entry.scope = ~0u;
+            stash.push(item);
+        }
+        else
         {
             Stashed item = { symbol, table.get(idx) };
             stash.push(item);
@@ -61,7 +67,8 @@ struct SymTable
 
     void enter_scope()
     {
-        Stashed scope_marker = {}; // symbol.data = nullptr
+        Stashed scope_marker;
+        scope_marker.symbol.data = "@scope_marker";
         scope_marker.entry.scope = scope_id;
         scope_id = next_scope_id++;
         stash.push(scope_marker);
@@ -73,13 +80,17 @@ struct SymTable
         {
             Stashed item = stash.pop();
 
-            if (item.symbol.data == nullptr) // scope_marker
+            const char * scope_marker = "@scope_marker";
+            if (item.symbol.data == scope_marker)
             {
                 scope_id = item.entry.scope;
                 break;
             }
 
-            table.set(item.symbol, item.entry);
+            if (item.entry.scope == ~0u)
+                table.remove(table.find(item.symbol));
+            else
+                table.set(item.symbol, item.entry);
         }
     }
 };

@@ -155,6 +155,12 @@ struct StrMap
         assert(index < table_size);
         return table[index].value;
     }
+
+    void remove(uint32_t index)
+    {
+        assert(index < table_size);
+        memset(table + index, 0, sizeof(Entry));
+    }
 };
 
 #undef MAX_PROBE

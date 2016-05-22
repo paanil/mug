@@ -69,16 +69,52 @@ bool Checker::type_check(Expression *exp)
             Type sym_type;
             if (!sym.has(exp->call.func_name, &sym_type))
             {
-                ec.print_error("function '%s' is not defined", exp->call.func_name.data);
+                ec.print_error("function '%s' is not defined",
+                               exp->call.func_name.data);
                 return false;
             }
             if (sym_type.type != Type::FUNC)
             {
-                ec.print_error("cannot call '%s'; it's not a function", exp->call.func_name.data);
+                ec.print_error("cannot call '%s'; it's not a function",
+                               exp->call.func_name.data);
                 return false;
             }
+
+            ArgList *a = exp->call.args;
+            ParamList *p = sym_type.func->params;
+
+            while (p)
+            {
+                if (a == nullptr)
+                {
+                    ec.print_error("calling function '%s' with too few arguments",
+                                   exp->call.func_name.data);
+                    return false;
+                }
+
+                if (!type_check(a->arg))
+                    return false;
+
+                if (!can_cast(a->arg->data_type, p->type))
+                {
+                    ec.print_error("incompatible argument type; "
+                                   "function takes %s, but %s was given",
+                                   Type::get_str(p->type), Type::get_str(a->arg->data_type));
+                    return false;
+                }
+
+                p = p->next;
+                a = a->next;
+            }
+
+            if (a != nullptr)
+            {
+                ec.print_error("calling function '%s' with too many arguments",
+                               exp->call.func_name.data);
+                return false;
+            }
+
             exp->data_type = sym_type.func->ret_type;
-            // TODO: Check args against params!
             return true;
         }
 
@@ -262,6 +298,7 @@ bool Checker::type_check(Node *node)
                 ec.print_error("non-void function should return something");
                 return false;
             }
+
             return true;
         }
 
@@ -300,7 +337,10 @@ bool Checker::type_check(Node *node)
             if (!type_check(node->func_def.body))
                 return false;
 
-            // TODO: Check that something is returned if return type != VOID.
+            if (node->func_def.ret_type.type != Type::VOID)
+            {
+                // TODO: Check that something is returned.
+            }
 
             sym.exit_scope();
             return true;
