@@ -3,64 +3,64 @@
 
 #include "str_map.h"
 
-#define PASTE_TTS                       \
-    PASTE_TT(END, "<end>")              \
-    PASTE_TT(NOT, "!")                  \
-    PASTE_TT(STAR, "*")                 \
-    PASTE_TT(SLASH, "/")                \
-    PASTE_TT(PLUS, "+")                 \
-    PASTE_TT(MINUS, "-")                \
-    PASTE_TT(AMP, "&")                  \
-    PASTE_TT(PIPE, "|")                 \
-    PASTE_TT(EQ, "==")                  \
-    PASTE_TT(NE, "!=")                  \
-    PASTE_TT(LT, "<")                   \
-    PASTE_TT(GT, ">")                   \
-    PASTE_TT(LE, "<=")                  \
-    PASTE_TT(GE, ">=")                  \
-    PASTE_TT(AND, "&&")                 \
-    PASTE_TT(OR, "||")                  \
-    PASTE_TT(ASSIGN, "=")               \
-    PASTE_TT(ARROW, "->")               \
-    PASTE_TT(LPAREN, "(")               \
-    PASTE_TT(RPAREN, ")")               \
-    PASTE_TT(LBRACE, "{")               \
-    PASTE_TT(RBRACE, "}")               \
-    PASTE_TT(COMMA, ",")                \
-    PASTE_TT(SEMICOLON, ";")            \
-    PASTE_TT(IF, "if")                  \
-    PASTE_TT(ELSE, "else")              \
-    PASTE_TT(WHILE, "while")            \
-    PASTE_TT(FUNCTION, "function")      \
-    PASTE_TT(RETURN, "return")          \
-    PASTE_TT(INT, "int")                \
-    PASTE_TT(INT8, "int8")              \
-    PASTE_TT(INT16, "int16")            \
-    PASTE_TT(INT32, "int32")            \
-    PASTE_TT(INT64, "int64")            \
-    PASTE_TT(UINT, "uint")              \
-    PASTE_TT(UINT8, "uint8")            \
-    PASTE_TT(UINT16, "uint16")          \
-    PASTE_TT(UINT32, "uint32")          \
-    PASTE_TT(UINT64, "uint64")          \
-    PASTE_TT(BOOL, "bool")              \
-    PASTE_TT(TRUE, "true")              \
-    PASTE_TT(FALSE, "false")            \
-    PASTE_TT(IDENT, "<ident>")          \
-    PASTE_TT(INT_LIT, "<int literal>")  \
-    PASTE_TT(UINT_LIT, "<uint literal>")\
-    PASTE_TT(INVALID, "<invalid>")
+#define PASTE_TOKENS                       \
+    PASTE_TOKEN(END, "<end>")              \
+    PASTE_TOKEN(NOT, "!")                  \
+    PASTE_TOKEN(STAR, "*")                 \
+    PASTE_TOKEN(SLASH, "/")                \
+    PASTE_TOKEN(PLUS, "+")                 \
+    PASTE_TOKEN(MINUS, "-")                \
+    PASTE_TOKEN(AMP, "&")                  \
+    PASTE_TOKEN(PIPE, "|")                 \
+    PASTE_TOKEN(EQ, "==")                  \
+    PASTE_TOKEN(NE, "!=")                  \
+    PASTE_TOKEN(LT, "<")                   \
+    PASTE_TOKEN(GT, ">")                   \
+    PASTE_TOKEN(LE, "<=")                  \
+    PASTE_TOKEN(GE, ">=")                  \
+    PASTE_TOKEN(AND, "&&")                 \
+    PASTE_TOKEN(OR, "||")                  \
+    PASTE_TOKEN(ASSIGN, "=")               \
+    PASTE_TOKEN(ARROW, "->")               \
+    PASTE_TOKEN(LPAREN, "(")               \
+    PASTE_TOKEN(RPAREN, ")")               \
+    PASTE_TOKEN(LBRACE, "{")               \
+    PASTE_TOKEN(RBRACE, "}")               \
+    PASTE_TOKEN(COMMA, ",")                \
+    PASTE_TOKEN(SEMICOLON, ";")            \
+    PASTE_TOKEN(IF, "if")                  \
+    PASTE_TOKEN(ELSE, "else")              \
+    PASTE_TOKEN(WHILE, "while")            \
+    PASTE_TOKEN(FUNCTION, "function")      \
+    PASTE_TOKEN(RETURN, "return")          \
+    PASTE_TOKEN(INT, "int")                \
+    PASTE_TOKEN(INT8, "int8")              \
+    PASTE_TOKEN(INT16, "int16")            \
+    PASTE_TOKEN(INT32, "int32")            \
+    PASTE_TOKEN(INT64, "int64")            \
+    PASTE_TOKEN(UINT, "uint")              \
+    PASTE_TOKEN(UINT8, "uint8")            \
+    PASTE_TOKEN(UINT16, "uint16")          \
+    PASTE_TOKEN(UINT32, "uint32")          \
+    PASTE_TOKEN(UINT64, "uint64")          \
+    PASTE_TOKEN(BOOL, "bool")              \
+    PASTE_TOKEN(TRUE, "true")              \
+    PASTE_TOKEN(FALSE, "false")            \
+    PASTE_TOKEN(IDENT, "<ident>")          \
+    PASTE_TOKEN(INT_LIT, "<int literal>")  \
+    PASTE_TOKEN(UINT_LIT, "<uint literal>")\
+    PASTE_TOKEN(INVALID, "<invalid>")
 
 struct Token
 {
-#define PASTE_TT(tt, ts) tt,
+#define PASTE_TOKEN(tt, ts) tt,
 
     enum Type
     {
-        PASTE_TTS
+        PASTE_TOKENS
     };
 
-#undef PASTE_TT
+#undef PASTE_TOKEN
 
     static const char *get_str(Type type);
 

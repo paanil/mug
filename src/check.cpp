@@ -26,6 +26,8 @@ bool can_cast(Type from, Type to)
         case Type::UINT: return (to.type == Type::INT || to.type == Type::UINT);
         case Type::BOOL: return (to.type == Type::BOOL);
         case Type::FUNC: return false;
+        default:
+            assert(0 && "invalid code path!");
     }
     return false;
 }
@@ -390,5 +392,11 @@ bool check(Ast ast, ErrorContext &ec)
         return false;
 
     Checker checker(ec);
-    return checker.type_check(ast.root);
+    if (!checker.type_check(ast.root))
+    {
+        ast.valid = false;
+        return false;
+    }
+
+    return true;
 }

@@ -4,41 +4,42 @@
 #include <cstdio>
 #include <cassert>
 
+#define PASTE_TYPES     \
+    PASTE_TYPE(MOV_IM)  \
+    PASTE_TYPE(MOV)     \
+    PASTE_TYPE(MUL)     \
+    PASTE_TYPE(IMUL)    \
+    PASTE_TYPE(ADD)     \
+    PASTE_TYPE(SUB)     \
+    PASTE_TYPE(EQ)      \
+    PASTE_TYPE(LT)      \
+    PASTE_TYPE(JMP)     \
+    PASTE_TYPE(JZ)
+
 struct IR
 {
+#define PASTE_TYPE(x) x,
+
     enum Type
     {
-        MOV_IM, // mov immediate
-        MOV, // mov temp
-        MUL,
-        //DIV,
-        //IMUL,
-        //IDIV,
-        ADD,
-        SUB,
-        EQ,
-        LT,
-        JMP,
-        JZ,
+        PASTE_TYPES
     };
+
+#undef PASTE_TYPE
+
+#define PASTE_TYPE(x) #x,
 
     static const char *get_str(Type type)
     {
         static const char *ir_str[] =
         {
-            "MOV_IM",
-            "MOV",
-            "MUL",
-            "ADD",
-            "SUB",
-            "EQ",
-            "LT",
-            "JMP",
-            "JZ",
+            PASTE_TYPES
         };
 
         return ir_str[type];
     }
+
+#undef PASTE_TYPE
 };
 
 struct Temp
@@ -197,7 +198,10 @@ struct IRGen
                 switch (exp->binary.op)
                 {
                     case BinaryOp_MUL:
-                        r.add(Quad(IR::MUL, result, left, right));
+                        if (exp->data_type.type == Type::INT)
+                            r.add(Quad(IR::IMUL, result, left, right));
+                        else
+                            r.add(Quad(IR::MUL, result, left, right));
                         break;
                     case BinaryOp_ADD:
                         r.add(Quad(IR::ADD, result, left, right));
@@ -330,6 +334,7 @@ void print_ir(Routine &r)
             printf("temp%d \ttemp%d \t-\n", q.target.temp.id, q.left.temp.id);
             break;
         case IR::MUL:
+        case IR::IMUL:
         case IR::ADD:
         case IR::SUB:
         case IR::EQ:
@@ -380,6 +385,7 @@ void gen_ir(Ast ast, const char *input)
     Alloc a; \
     ErrorContext ec(1); \
     Ast ast = parse(input, a, ec); \
+    check(ast, ec); \
     gen_ir(ast, input); \
 }
 

@@ -7,33 +7,34 @@
 // Token
 //
 
+#define PASTE_TOKEN(tt, ts) ts,
+
 const char *Token::get_str(Token::Type type)
 {
-#define PASTE_TT(tt, ts) ts,
-
     static const char *token_str[] =
     {
-        PASTE_TTS
+        PASTE_TOKENS
     };
-
-#undef PASTE_TT
 
     return token_str[type];
 }
+
+#undef PASTE_TOKEN
 
 
 //
 // Lexer
 //
 
+#define PASTE_TOKEN(tt, ts) if (Token::IF <= Token::tt && Token::tt <= Token::FALSE) keyword_map.set(Str::make(ts), Token::tt);
+
 Lexer::Lexer()
 {
-#define PASTE_TT(tt, ts) if (Token::IF <= Token::tt && Token::tt <= Token::FALSE) keyword_map.set(Str::make(ts), Token::tt);
+    PASTE_TOKENS
 
-    PASTE_TTS
-
-#undef PASTE_TT
 }
+
+#undef PASTE_TOKEN
 
 char Lexer::peek()
 {
