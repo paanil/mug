@@ -32,6 +32,12 @@ struct SymTable
     , stash()
     { }
 
+    bool has(Str symbol)
+    {
+        uint32_t idx = table.find(symbol);
+        return (idx != NOT_FOUND);
+    }
+
     bool has(Str symbol, ValueT *result)
     {
         uint32_t idx = table.find(symbol);

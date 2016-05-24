@@ -11,6 +11,9 @@ struct IR
         MOV_IM, // mov immediate
         MOV, // mov temp
         MUL,
+        //DIV,
+        //IMUL,
+        //IDIV,
         ADD,
         SUB,
         EQ,
@@ -479,6 +482,7 @@ void run_static_check_tests()
     TEST_FAIL("int x = 0; while (10) { int x = x + 1; }")
     TEST_FAIL("while (false) { int x = 0; x = x + y; }")
     TEST_FAIL("5 < 10u;")
+    TEST_FAIL("function f() {} function f(int x) {}")
 
     fprintf(stdout, "------------------------------\n");
     fprintf(stdout, "ran %d static check tests: %d succeeded, %d failed.\n\n\n", tests, tests - failed, failed);

@@ -347,6 +347,13 @@ bool Checker::type_check(Node *node)
 
         case NodeType_FUNC_DEF:
         {
+            if (sym.has(node->func_def.name))
+            {
+                ec.print_error("function '%s' has already been defined",
+                               node->func_def.name.data);
+                return false;
+            }
+
             Type type = { Type::FUNC, &node->func_def };
             sym.put(node->func_def.name, type);
 
