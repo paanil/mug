@@ -1,5 +1,6 @@
 #include "ast.h"
 #include "sym_table.h"
+#include "alloc.h"
 
 #include <cstdio>
 #include <cassert>
@@ -14,7 +15,9 @@
     PASTE_TYPE(EQ)      \
     PASTE_TYPE(LT)      \
     PASTE_TYPE(JMP)     \
-    PASTE_TYPE(JZ)
+    PASTE_TYPE(JZ)      \
+    PASTE_TYPE(CALL)    \
+    PASTE_TYPE(RET)
 
 struct IR
 {
@@ -40,6 +43,8 @@ struct IR
     }
 
 #undef PASTE_TYPE
+
+    struct Routine *routines;
 };
 
 struct Temp
@@ -50,7 +55,7 @@ struct Temp
 union Operand
 {
     Temp temp;
-    int jump;
+    uint32_t jump; // TODO: Label.
     uint64_t int_value;
 };
 
@@ -87,20 +92,33 @@ struct Quad
     {}
 };
 
-struct QuadRef
+struct Quads
 {
-    int index;
+    static const uint32_t N = 64;
+    Quad quads[N];
+    Quads *next;
 };
 
 struct Routine
 {
-    int n;
-    Quad quads[100];
     int next_temp_id;
 
-    Routine()
-    : n()
-    , next_temp_id()
+    uint32_t n;
+    Quads *head;
+    Quads *tail;
+
+    Str name;
+    uint32_t id;
+    Routine *next;
+
+    Routine(Str name_, uint32_t id_)
+    : next_temp_id()
+    , n()
+    , head()
+    , tail()
+    , name(name_)
+    , id(id_)
+    , next()
     {}
 
     Operand make_temp()
@@ -117,23 +135,63 @@ struct Routine
         return result;
     }
 
-    QuadRef add(Quad quad)
+    Quad *add(Quad quad, Alloc &a)
     {
-        assert(n < 100);
-        quads[n] = quad;
-        return (QuadRef){ n++ };
+        uint32_t m = n % Quads::N;
+
+        if (m == 0)
+        {
+            Quads *qs = a.allocate<Quads>();
+            qs->next = nullptr;
+            if (head == nullptr)
+                 head = qs;
+            else tail->next = qs;
+            tail = qs;
+        }
+
+        Quad *q = tail->quads + m;
+        *q = quad; n++;
+        return q;
     }
 
-    void set_jump_target_here(QuadRef quad)
+    void set_jump_target_here(Quad *quad)
     {
-        assert(quad.index < n);
-        quads[quad.index].target.jump = n;
+        quad->target.jump = n;
+    }
+
+    Quad &operator [] (uint32_t index)
+    {
+        assert(index < n);
+        Quads *qs = head;
+        uint32_t m = index / Quads::N;
+        while (m --> 0) // haha
+            qs = qs->next;
+        return qs->quads[index % Quads::N];
     }
 };
 
 struct IRGen
 {
+    uint32_t next_routine_id;
+    Routine *tail;
     SymTable<Temp> sym;
+    Alloc &a;
+
+    IRGen(Alloc &a_)
+    : next_routine_id()
+    , tail()
+    , a(a_)
+    {}
+
+    Routine *make_routine(Str name)
+    {
+        Routine *r = a.allocate<Routine>();
+        *r = Routine(name, next_routine_id++);
+        if (tail != nullptr)
+            tail->next = r;
+        tail = r;
+        return r;
+    }
 
     Operand gen_ir(Routine &r, Expression *exp)
     {
@@ -144,7 +202,7 @@ struct IRGen
                 Operand result = r.make_temp();
                 Operand operand;
                 operand.int_value = exp->boolean.value ? 1 : 0;
-                r.add(Quad(IR::MOV_IM, result, operand));
+                r.add(Quad(IR::MOV_IM, result, operand), a);
                 return result;
             }
 
@@ -153,7 +211,7 @@ struct IRGen
                 Operand result = r.make_temp();
                 Operand operand;
                 operand.int_value = exp->constant.value;
-                r.add(Quad(IR::MOV_IM, result, operand));
+                r.add(Quad(IR::MOV_IM, result, operand), a);
                 return result;
             }
 
@@ -161,6 +219,15 @@ struct IRGen
             {
                 Operand result;
                 result.temp = sym.get(exp->var.name);
+                return result;
+            }
+
+            case ExpType_CALL:
+            {
+                Operand result = r.make_temp();
+                Operand routine;
+                routine.temp = sym.get(exp->call.func_name);
+                r.add(Quad(IR::CALL, result, routine), a);
                 return result;
             }
 
@@ -181,9 +248,9 @@ struct IRGen
 
                         Operand zero;
                         zero.int_value = 0;
-                        r.add(Quad(IR::MOV_IM, left, zero));
+                        r.add(Quad(IR::MOV_IM, left, zero), a);
 
-                        r.add(Quad(IR::SUB, result, left, right));
+                        r.add(Quad(IR::SUB, result, left, right), a);
                         return result;
                     }
 
@@ -202,21 +269,21 @@ struct IRGen
                 {
                     case BinaryOp_MUL:
                         if (exp->data_type.type == Type::INT)
-                            r.add(Quad(IR::IMUL, result, left, right));
+                            r.add(Quad(IR::IMUL, result, left, right), a);
                         else
-                            r.add(Quad(IR::MUL, result, left, right));
+                            r.add(Quad(IR::MUL, result, left, right), a);
                         break;
                     case BinaryOp_ADD:
-                        r.add(Quad(IR::ADD, result, left, right));
+                        r.add(Quad(IR::ADD, result, left, right), a);
                         break;
                     case BinaryOp_SUB:
-                        r.add(Quad(IR::SUB, result, left, right));
+                        r.add(Quad(IR::SUB, result, left, right), a);
                         break;
                     case BinaryOp_EQ:
-                        r.add(Quad(IR::EQ, result, left, right));
+                        r.add(Quad(IR::EQ, result, left, right), a);
                         break;
                     case BinaryOp_LT:
-                        r.add(Quad(IR::LT, result, left, right));
+                        r.add(Quad(IR::LT, result, left, right), a);
                         break;
                 }
 
@@ -245,7 +312,7 @@ struct IRGen
                 // By doing that, we wouldn't get useless movs here, BUT
                 // think about expressions that use vars e.g. "(x + y) * z"!
                 // They would generate unnecessary movs.
-                r.add(Quad(IR::MOV, var, value));
+                r.add(Quad(IR::MOV, var, value), a);
                 break;
             }
 
@@ -271,11 +338,11 @@ struct IRGen
             {
                 Operand dummy_target;
                 Operand condition = gen_ir(r, node->if_stmt.condition);
-                QuadRef jz_quad = r.add(Quad(IR::JZ, dummy_target, condition));
+                Quad *jz_quad = r.add(Quad(IR::JZ, dummy_target, condition), a);
                 gen_ir(r, node->if_stmt.true_stmt);
                 if (node->if_stmt.else_stmt)
                 {
-                    QuadRef jmp_quad = r.add(Quad(IR::JMP));
+                    Quad *jmp_quad = r.add(Quad(IR::JMP), a);
                     r.set_jump_target_here(jz_quad);
                     gen_ir(r, node->if_stmt.else_stmt);
                     r.set_jump_target_here(jmp_quad);
@@ -291,9 +358,9 @@ struct IRGen
             {
                 Operand jump_target = r.make_jump_target();
                 Operand condition = gen_ir(r, node->while_stmt.condition);
-                QuadRef jz_quad = r.add(Quad(IR::JZ, {}, condition));
+                Quad *jz_quad = r.add(Quad(IR::JZ, {}, condition), a);
                 gen_ir(r, node->while_stmt.stmt);
-                r.add(Quad(IR::JMP, jump_target));
+                r.add(Quad(IR::JMP, jump_target), a);
                 r.set_jump_target_here(jz_quad);
                 break;
             }
@@ -313,29 +380,48 @@ struct IRGen
                 break;
             }
 
-//            case NodeType_FUNC_DEF:
-//            {
-//                sym.put(node->func_def.name, ???);
-//
-//                sym.enter_scope();
-//
-//                for (ParamList *p = node->func_def.params; p; p = p->next)
-//                    sym.put(p->name, ???);
-//
-//                gen_ir(node->func_def.body);
-//
-//                sym.exit_scope();
-//                break;
-//            }
+            case NodeType_FUNC_DEF:
+            {
+                Routine *routine = make_routine(node->func_def.name);
+                Temp temp; // TODO: Routine id or...?
+                temp.id = routine->id;
+                sym.put(node->func_def.name, temp);
+
+                sym.enter_scope();
+
+                for (ParamList *p = node->func_def.params; p; p = p->next)
+                {
+                    Operand param = routine->make_temp();
+                    sym.put(p->name, param.temp);
+                }
+
+                gen_ir(*routine, node->func_def.body);
+                routine->add(Quad(IR::RET), a);
+
+                sym.exit_scope();
+                break;
+            }
         }
+    }
+
+    IR gen_ir(Ast ast)
+    {
+        Routine *top_level = make_routine(Str::make("@top_level"));
+        gen_ir(*top_level, ast.root);
+
+        IR ir;
+        ir.routines = top_level;
+        return ir;
     }
 };
 
 void print_ir(Routine &r)
 {
-    for (int i = 0; i < r.n; i++)
+    printf("\n%s#%u:\n", r.name.data, r.id);
+
+    for(uint32_t i = 0; i < r.n; i++)
     {
-        Quad q = r.quads[i];
+        Quad q = r[i];
 
         printf("%d \t%s \t", i, IR::get_str(q.op));
 
@@ -361,11 +447,27 @@ void print_ir(Routine &r)
         case IR::JZ:
             printf("%d \ttemp%d \t-\n", q.target.jump, q.left.temp.id);
             break;
+        case IR::CALL:
+            printf("temp%d \tfunc%d \t-\n", q.target.temp.id, q.left.temp.id);
+            break;
+        case IR::RET:
+            printf("- \t- \t-\n", q.target.temp.id, q.left.temp.id);
+            break;
         }
     }
 }
 
-void gen_ir(Ast ast, const char *input)
+void print_ir(IR &ir)
+{
+    Routine *r = ir.routines;
+    while (r)
+    {
+        print_ir(*r);
+        r = r->next;
+    }
+}
+
+void gen_ir(Ast ast, Alloc &a, const char *input)
 {
     if (!ast.valid)
     {
@@ -373,12 +475,10 @@ void gen_ir(Ast ast, const char *input)
         return;
     }
 
-    IRGen gen;
-
-    Routine top_level;
-    gen.gen_ir(top_level, ast.root);
+    IRGen gen(a);
+    IR ir = gen.gen_ir(ast);
     printf("\"%s\"\n\n", input);
-    print_ir(top_level);
+    print_ir(ir);
     return;
 }
 
@@ -400,7 +500,7 @@ void gen_ir(Ast ast, const char *input)
     ErrorContext ec(1); \
     Ast ast = parse(input, a, ec); \
     check(ast, ec); \
-    gen_ir(ast, input); \
+    gen_ir(ast, a, input); \
 }
 
 void run_ir_gen_tests()
@@ -421,7 +521,8 @@ void run_ir_gen_tests()
 //    TEST("bool result = false;")
 //    TEST("if (5 == 6) true;")
 //    TEST("int x = 0; if (5 == 6) { x = 5; } else { int y = 2; x = 5 * y; }")
-    TEST("int x = 1; int i = 0; while (i < 10) { x = x + x; i = i + 1; } int y = 5 * x;")
+//    TEST("int x = 1; int i = 0; while (i < 10) { x = x + x; i = i + 1; } int y = 5 * x;")
+    TEST("function f() { int x = 0; x = x + 5; } f();")
 
     fprintf(stdout, "------------------------------\n");
     fprintf(stdout, "ran %d ir gen tests: %d succeeded, %d failed.\n\n\n", tests, tests - failed, failed);
