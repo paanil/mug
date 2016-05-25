@@ -303,6 +303,9 @@ struct IRGen
                 return result;
             }
         }
+
+        assert(0 && "invalid code path!");
+        return {};
     }
 
     void gen_ir(Routine &r, Node *node)
@@ -422,10 +425,6 @@ struct IRGen
                 }
 
                 gen_ir(*routine, node->func_def.body);
-
-                Operand flag;
-                flag.int_value = false; // a hack: if false, return nothing
-                routine->add(Quad(IR::RET, flag), a);
 
                 sym.exit_scope();
                 break;
