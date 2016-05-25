@@ -17,7 +17,8 @@
     PASTE_TYPE(JMP)     \
     PASTE_TYPE(JZ)      \
     PASTE_TYPE(CALL)    \
-    PASTE_TYPE(RET)
+    PASTE_TYPE(RET)     \
+    PASTE_TYPE(ARG)
 
 struct IR
 {
@@ -47,9 +48,11 @@ struct IR
     struct Routine *routines;
 };
 
+// TODO: func id, arg index
+
 struct Temp
 {
-    int id;
+    uint32_t id;
 };
 
 union Operand
@@ -101,7 +104,7 @@ struct Quads
 
 struct Routine
 {
-    int next_temp_id;
+    uint32_t next_temp_id;
 
     uint32_t n;
     Quads *head;
@@ -224,6 +227,16 @@ struct IRGen
 
             case ExpType_CALL:
             {
+                ArgList *arg = exp->call.args;
+                for (uint32_t index = 0; arg; index++)
+                {
+                    Operand arg_idx;
+                    arg_idx.temp.id = index;
+                    Operand value = gen_ir(r, arg->arg);
+                    r.add(Quad(IR::ARG, arg_idx, value), a);
+                    arg = arg->next;
+                }
+
                 Operand result = r.make_temp();
                 Operand routine;
                 routine.temp = sym.get(exp->call.func_name);
@@ -334,6 +347,19 @@ struct IRGen
                 break;
             }
 
+            case NodeType_RETURN:
+            {
+                Operand flag, value;
+                flag.int_value = false; // a hack: if false, returns nothing
+                if (node->ret.value)
+                {
+                    flag.int_value = true; // returns something
+                    value = gen_ir(r, node->ret.value);
+                }
+                r.add(Quad(IR::RET, flag, value), a);
+                break;
+            }
+
             case NodeType_IF:
             {
                 Operand dummy_target;
@@ -396,7 +422,10 @@ struct IRGen
                 }
 
                 gen_ir(*routine, node->func_def.body);
-                routine->add(Quad(IR::RET), a);
+
+                Operand flag;
+                flag.int_value = false; // a hack: if false, return nothing
+                routine->add(Quad(IR::RET, flag), a);
 
                 sym.exit_scope();
                 break;
@@ -423,15 +452,15 @@ void print_ir(Routine &r)
     {
         Quad q = r[i];
 
-        printf("%d \t%s \t", i, IR::get_str(q.op));
+        printf("%u \t%s \t", i, IR::get_str(q.op));
 
         switch (q.op)
         {
         case IR::MOV_IM:
-            printf("temp%d \t%llu \t-\n", q.target.temp.id, q.left.int_value);
+            printf("temp%u \t%llu \t-\n", q.target.temp.id, q.left.int_value);
             break;
         case IR::MOV:
-            printf("temp%d \ttemp%d \t-\n", q.target.temp.id, q.left.temp.id);
+            printf("temp%u \ttemp%u \t-\n", q.target.temp.id, q.left.temp.id);
             break;
         case IR::MUL:
         case IR::IMUL:
@@ -439,19 +468,25 @@ void print_ir(Routine &r)
         case IR::SUB:
         case IR::EQ:
         case IR::LT:
-            printf("temp%d \ttemp%d \ttemp%d\n", q.target.temp.id, q.left.temp.id, q.right.temp.id);
+            printf("temp%u \ttemp%u \ttemp%u\n", q.target.temp.id, q.left.temp.id, q.right.temp.id);
             break;
         case IR::JMP:
-            printf("%d \t- \t-\n", q.target.jump);
+            printf("%u \t- \t-\n", q.target.jump);
             break;
         case IR::JZ:
-            printf("%d \ttemp%d \t-\n", q.target.jump, q.left.temp.id);
+            printf("%u \ttemp%u \t-\n", q.target.jump, q.left.temp.id);
             break;
         case IR::CALL:
-            printf("temp%d \tfunc%d \t-\n", q.target.temp.id, q.left.temp.id);
+            printf("temp%u \tfunc%u \t-\n", q.target.temp.id, q.left.temp.id);
             break;
         case IR::RET:
-            printf("- \t- \t-\n", q.target.temp.id, q.left.temp.id);
+            if (q.target.int_value)
+                printf("temp%u \t- \t-\n", q.left.temp.id);
+            else
+                printf("- \t- \t-\n");
+            break;
+        case IR::ARG:
+            printf("%u \ttemp%u \t-\n", q.target.temp.id, q.left.temp.id);
             break;
         }
     }
@@ -522,7 +557,8 @@ void run_ir_gen_tests()
 //    TEST("if (5 == 6) true;")
 //    TEST("int x = 0; if (5 == 6) { x = 5; } else { int y = 2; x = 5 * y; }")
 //    TEST("int x = 1; int i = 0; while (i < 10) { x = x + x; i = i + 1; } int y = 5 * x;")
-    TEST("function f() { int x = 0; x = x + 5; } f();")
+//    TEST("function f() { int x = 0; x = x + 5; } f();")
+    TEST("function f(int x) -> int { return x + 1; } int x = 0; while (x < 5) x = f(x);")
 
     fprintf(stdout, "------------------------------\n");
     fprintf(stdout, "ran %d ir gen tests: %d succeeded, %d failed.\n\n\n", tests, tests - failed, failed);

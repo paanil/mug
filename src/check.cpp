@@ -386,7 +386,7 @@ bool Checker::type_check(Node *node)
 //
 //
 
-bool check(Ast ast, ErrorContext &ec)
+bool check(Ast &ast, ErrorContext &ec)
 {
     if (!ast.valid)
         return false;

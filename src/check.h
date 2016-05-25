@@ -5,6 +5,6 @@
 
 struct ErrorContext;
 
-bool check(Ast ast, ErrorContext &ec);
+bool check(Ast &ast, ErrorContext &ec);
 
 #endif // CHECK_H
