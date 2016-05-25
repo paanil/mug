@@ -168,7 +168,7 @@ struct IRGen
             {
                 switch (exp->unary.op)
                 {
-//                    case UnaryOp_NEG:
+//                    case UnaryOp_NOT:
 //                    {
 //
 //                    }
@@ -186,6 +186,9 @@ struct IRGen
                         r.add(Quad(IR::SUB, result, left, right));
                         return result;
                     }
+
+                    assert(0 && "invalid code path!");
+                    break;
                 }
             }
 
@@ -237,18 +240,29 @@ struct IRGen
                 Operand var;
                 var.temp = sym.get(node->assign.var_name);
                 Operand value = gen_ir(r, node->assign.value);
+                // TODO: If gen_ir(exp) always generates a quad with a new temp as target,
+                // we could replace that quad's target with the var and not add this mov quad.
+                // By doing that, we wouldn't get useless movs here, BUT
+                // think about expressions that use vars e.g. "(x + y) * z"!
+                // They would generate unnecessary movs.
                 r.add(Quad(IR::MOV, var, value));
                 break;
             }
 
             case NodeType_DECL:
             {
-                Operand var = r.make_temp();
-                sym.put(node->decl.var_name, var.temp);
                 if (node->decl.init)
                 {
                     Operand init = gen_ir(r, node->decl.init);
-                    r.add(Quad(IR::MOV, var, init));
+                    sym.put(node->decl.var_name, init.temp);
+                }
+                else
+                {
+                    // TODO: Is this even necessary?
+                    // We could sym.put(var_name, temp) when we first assign a value, BUT
+                    // what if var is used without initializing or assigning?
+                    Operand var = r.make_temp();
+                    sym.put(node->decl.var_name, var.temp);
                 }
                 break;
             }
