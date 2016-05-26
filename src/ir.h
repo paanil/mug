@@ -11,6 +11,7 @@ union Operand
     uint32_t arg_index;
     uint32_t jump; // TODO: Label.
     uint64_t int_value;
+    bool returns_something;
 };
 
 struct Quad

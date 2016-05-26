@@ -244,10 +244,10 @@ struct IRGen
             case NodeType_RETURN:
             {
                 Operand flag, value;
-                flag.int_value = false; // a hack: if false, returns nothing
+                flag.returns_something = false;
                 if (node->ret.value)
                 {
-                    flag.int_value = true; // returns something
+                    flag.returns_something = true;
                     value = gen_ir(r, node->ret.value);
                 }
                 r.add(Quad(IR::RET, flag, value), a);
@@ -341,21 +341,21 @@ struct IRGen
 
 void print_ir(Routine &r)
 {
-    printf("\n%s#%u:\n", r.name.data, r.id);
+    fprintf(stdout, "\n%s#%u:\n", r.name.data, r.id);
 
     for(uint32_t i = 0; i < r.n; i++)
     {
         Quad q = r[i];
 
-        printf("%u \t%s \t", i, IR::get_str(q.op));
+        fprintf(stdout, "%u \t%s \t", i, IR::get_str(q.op));
 
         switch (q.op)
         {
         case IR::MOV_IM:
-            printf("temp%u \t%llu \t-\n", q.target.temp_id, q.left.int_value);
+            fprintf(stdout, "temp%u \t%llu \t-\n", q.target.temp_id, q.left.int_value);
             break;
         case IR::MOV:
-            printf("temp%u \ttemp%u \t-\n", q.target.temp_id, q.left.temp_id);
+            fprintf(stdout, "temp%u \ttemp%u \t-\n", q.target.temp_id, q.left.temp_id);
             break;
         case IR::MUL:
         case IR::IMUL:
@@ -363,25 +363,25 @@ void print_ir(Routine &r)
         case IR::SUB:
         case IR::EQ:
         case IR::LT:
-            printf("temp%u \ttemp%u \ttemp%u\n", q.target.temp_id, q.left.temp_id, q.right.temp_id);
+            fprintf(stdout, "temp%u \ttemp%u \ttemp%u\n", q.target.temp_id, q.left.temp_id, q.right.temp_id);
             break;
         case IR::JMP:
-            printf("%u \t- \t-\n", q.target.jump);
+            fprintf(stdout, "%u \t- \t-\n", q.target.jump);
             break;
         case IR::JZ:
-            printf("%u \ttemp%u \t-\n", q.target.jump, q.left.temp_id);
+            fprintf(stdout, "%u \ttemp%u \t-\n", q.target.jump, q.left.temp_id);
             break;
         case IR::CALL:
-            printf("temp%u \tfunc%u \t-\n", q.target.temp_id, q.left.func_id);
+            fprintf(stdout, "temp%u \tfunc%u \t-\n", q.target.temp_id, q.left.func_id);
             break;
         case IR::RET:
-            if (q.target.int_value)
-                printf("temp%u \t- \t-\n", q.left.temp_id);
+            if (q.target.returns_something)
+                fprintf(stdout, "temp%u \t- \t-\n", q.left.temp_id);
             else
-                printf("- \t- \t-\n");
+                fprintf(stdout, "- \t- \t-\n");
             break;
         case IR::ARG:
-            printf("%u \ttemp%u \t-\n", q.target.arg_index, q.left.temp_id);
+            fprintf(stdout, "%u \ttemp%u \t-\n", q.target.arg_index, q.left.temp_id);
             break;
         }
     }
@@ -401,7 +401,6 @@ IR gen_ir(Ast &ast, Alloc &a)
 {
     if (!ast.valid)
     {
-        printf("ast not valid!");
         return {};
     }
 
