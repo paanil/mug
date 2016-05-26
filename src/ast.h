@@ -1,7 +1,7 @@
 #ifndef AST_H
 #define AST_H
 
-#include "lexer.h"
+#include "str.h"
 #include "type.h"
 
 #define DEF_EXP(Name) \

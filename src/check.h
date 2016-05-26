@@ -1,10 +1,6 @@
 #ifndef CHECK_H
 #define CHECK_H
 
-#include "ast.h"
-
-struct ErrorContext;
-
-bool check(Ast &ast, ErrorContext &ec);
+bool check(struct Ast &ast, struct ErrorContext &ec);
 
 #endif // CHECK_H

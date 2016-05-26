@@ -1,4 +1,5 @@
 #include "parser.h"
+#include "lexer.h"
 #include "ast_alloc.h"
 #include "error_context.h"
 

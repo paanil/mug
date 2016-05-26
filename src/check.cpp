@@ -1,4 +1,5 @@
 #include "check.h"
+#include "ast.h"
 #include "sym_table.h"
 #include "error_context.h"
 

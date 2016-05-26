@@ -3,9 +3,6 @@
 
 #include "ast.h"
 
-struct Alloc;
-struct ErrorContext;
-
 /*
 
 Grammar
@@ -34,6 +31,6 @@ arguments := expression (',' arguments | <none>) | <none>
 
 */
 
-Ast parse(const char *input, Alloc &a, ErrorContext &ec);
+Ast parse(const char *input, struct Alloc &a, struct ErrorContext &ec);
 
 #endif // PARSER_H

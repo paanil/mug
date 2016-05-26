@@ -1,7 +1,5 @@
 #include "lexer.h"
 
-#include <cassert>
-
 
 //
 // Token
