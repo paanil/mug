@@ -387,7 +387,7 @@ void print_ir(Routine &r)
     }
 }
 
-void print_ir(IR &ir)
+void print_ir(IR ir)
 {
     Routine *r = ir.routines;
     while (r)
@@ -397,7 +397,7 @@ void print_ir(IR &ir)
     }
 }
 
-IR gen_ir(Ast &ast, Alloc &a, const char *input)
+IR gen_ir(Ast &ast, Alloc &a)
 {
     if (!ast.valid)
     {
@@ -406,8 +406,5 @@ IR gen_ir(Ast &ast, Alloc &a, const char *input)
     }
 
     IRGen gen(a);
-    IR ir = gen.gen_ir(ast);
-    printf("\"%s\"\n\n", input);
-    print_ir(ir);
-    return ir;
+    return gen.gen_ir(ast);
 }

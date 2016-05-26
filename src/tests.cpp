@@ -1,3 +1,125 @@
+#include "ir.h"
+#include "sym_table.h"
+
+#include <cstdio>
+#include <cassert>
+
+union Value
+{
+    int64_t  ivalue;
+    uint64_t uvalue;
+};
+
+struct Int
+{
+    Value retval;
+    int env_index;
+    Value env[20][100]; // max 20 nested calls, max 100 temps per call
+    Routine *routines[20]; // max 20 routines
+
+
+    Value get(Operand temp)
+    {
+        assert(temp.temp_id < 100);
+        return env[env_index][temp.temp_id];
+    }
+
+    void set(Operand temp, uint64_t value)
+    {
+        assert(temp.temp_id < 100);
+        env[env_index][temp.temp_id].uvalue = value;
+    }
+
+    void eval(Routine &r)
+    {
+        for (uint32_t i = 0; i < r.n; i++)
+        {
+            Quad q = r[i];
+            switch (q.op)
+            {
+                case IR::MOV_IM:
+                    set(q.target, q.left.int_value);
+                    break;
+                case IR::MOV:
+                    set(q.target, get(q.left).uvalue);
+                    break;
+                case IR::MUL:
+                    set(q.target, get(q.left).uvalue * get(q.right).uvalue);
+                    break;
+                case IR::IMUL:
+                    set(q.target, get(q.left).ivalue * get(q.right).ivalue);
+                    break;
+                case IR::ADD:
+                    set(q.target, get(q.left).uvalue + get(q.right).uvalue);
+                    break;
+                case IR::SUB:
+                    set(q.target, get(q.left).uvalue - get(q.right).uvalue);
+                    break;
+                case IR::EQ:
+                    set(q.target, get(q.left).uvalue == get(q.right).uvalue);
+                    break;
+                case IR::LT:
+                    set(q.target, get(q.left).uvalue < get(q.right).uvalue);
+                    break;
+                case IR::JMP:
+                    i = q.target.jump - 1; // for loop will i++
+                    break;
+                case IR::JZ:
+                    if (get(q.left).uvalue == 0)
+                        i = q.target.jump - 1; // for loop will i++
+                    break;
+                case IR::CALL:
+                    assert(env_index < 20);
+                    env_index++;
+                    eval(*routines[q.left.func_id]);
+                    env_index--;
+                    set(q.target, retval.uvalue);
+                    break;
+                case IR::RET:
+                    if (q.target.int_value)
+                        retval = get(q.left);
+                    return;
+                case IR::ARG:
+                {
+                    assert(env_index < 20);
+                    Value arg = get(q.left);
+                    env_index++;
+                    Operand temp;
+                    temp.temp_id = q.target.arg_index;
+                    set(temp, arg.uvalue);
+                    env_index--;
+                    break;
+                }
+            }
+        }
+    }
+
+    Value eval(IR ir)
+    {
+        Routine *r = ir.routines;
+        while (r)
+        {
+            assert(r->id < 20);
+            routines[r->id] = r;
+            r = r->next;
+        }
+
+        env_index = 0;
+        eval(*routines[0]);
+
+        return retval;
+    }
+};
+
+void eval(IR ir)
+{
+    Int evaluator;
+    Value val = evaluator.eval(ir);
+
+    printf("returned %lld (int) / %llu (uint) / %s (bool)\n",
+           val.ivalue, val.uvalue, val.uvalue ? "true" : "false");
+}
+
 #include "ir_gen.h"
 #include "check.h"
 #include "parser.h"
@@ -17,7 +139,9 @@
     ErrorContext ec(1); \
     Ast ast = parse(input, a, ec); \
     check(ast, ec); \
-    gen_ir(ast, a, input); \
+    IR ir = gen_ir(ast, a); \
+    print_ir(ir); \
+    eval(ir); \
 }
 
 void run_ir_gen_tests()
@@ -40,7 +164,20 @@ void run_ir_gen_tests()
 //    TEST("int x = 0; if (5 == 6) { x = 5; } else { int y = 2; x = 5 * y; }")
 //    TEST("int x = 1; int i = 0; while (i < 10) { x = x + x; i = i + 1; } int y = 5 * x;")
 //    TEST("function f() { int x = 0; x = x + 5; } f();")
-    TEST("function f(int x) -> int { return x + 1; } int x = 0; while (x < 5) x = f(x);")
+//    TEST("function f(int x) -> int { return x + 1; } int x = 0; while (x < 5) x = f(x);")
+//    TEST("function f() -> bool { return false; } f();")
+//    TEST("function f() -> int { return 1*2*3*4*-5+8; } f();")
+    TEST("function g(int i) -> int { int x = 5; return i*i + x; }"
+         "function f() -> int {"
+         "  int val = 0;"
+         "  int i = 0;"
+         "  while (i < 3) {"
+         "    val = val - g(i);"
+         "    i = i + 1;"
+         "  }"
+         "  return val;"
+         "}"
+         "f();")
 
     fprintf(stdout, "------------------------------\n");
     fprintf(stdout, "ran %d ir gen tests: %d succeeded, %d failed.\n\n\n", tests, tests - failed, failed);

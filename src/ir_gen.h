@@ -32,6 +32,8 @@ struct IR
     struct Routine *routines;
 };
 
-IR gen_ir(struct Ast &ast, struct Alloc &a, const char *input);
+void print_ir(IR ir);
+
+IR gen_ir(struct Ast &ast, struct Alloc &a);
 
 #endif // IR_GEN_H
