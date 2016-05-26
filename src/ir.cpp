@@ -68,7 +68,7 @@ struct IRGen
 {
     uint32_t next_routine_id;
     Routine *tail;
-    SymTable<Temp> sym;
+    SymTable<Operand> sym;
     Alloc &a;
 
     IRGen(Alloc &a_)
@@ -112,7 +112,7 @@ struct IRGen
             case ExpType_VAR:
             {
                 Operand result;
-                result.temp = sym.get(exp->var.name);
+                result = sym.get(exp->var.name);
                 return result;
             }
 
@@ -122,7 +122,7 @@ struct IRGen
                 for (uint32_t index = 0; arg; index++)
                 {
                     Operand arg_idx;
-                    arg_idx.temp.id = index;
+                    arg_idx.arg_index = index;
                     Operand value = gen_ir(r, arg->arg);
                     r.add(Quad(IR::ARG, arg_idx, value), a);
                     arg = arg->next;
@@ -130,7 +130,7 @@ struct IRGen
 
                 Operand result = r.make_temp();
                 Operand routine;
-                routine.temp = sym.get(exp->call.func_name);
+                routine = sym.get(exp->call.func_name);
                 r.add(Quad(IR::CALL, result, routine), a);
                 return result;
             }
@@ -212,7 +212,7 @@ struct IRGen
             case NodeType_ASSIGN:
             {
                 Operand var;
-                var.temp = sym.get(node->assign.var_name);
+                var = sym.get(node->assign.var_name);
                 Operand value = gen_ir(r, node->assign.value);
                 // TODO: If gen_ir(exp) always generates a quad with a new temp as target,
                 // we could replace that quad's target with the var and not add this mov quad.
@@ -228,7 +228,7 @@ struct IRGen
                 if (node->decl.init)
                 {
                     Operand init = gen_ir(r, node->decl.init);
-                    sym.put(node->decl.var_name, init.temp);
+                    sym.put(node->decl.var_name, init);
                 }
                 else
                 {
@@ -236,7 +236,7 @@ struct IRGen
                     // We could sym.put(var_name, temp) when we first assign a value, BUT
                     // what if var is used without initializing or assigning?
                     Operand var = r.make_temp();
-                    sym.put(node->decl.var_name, var.temp);
+                    sym.put(node->decl.var_name, var);
                 }
                 break;
             }
@@ -303,16 +303,16 @@ struct IRGen
             case NodeType_FUNC_DEF:
             {
                 Routine *routine = make_routine(node->func_def.name);
-                Temp temp; // TODO: Routine id or...?
-                temp.id = routine->id;
-                sym.put(node->func_def.name, temp);
+                Operand func;
+                func.func_id = routine->id;
+                sym.put(node->func_def.name, func);
 
                 sym.enter_scope();
 
                 for (ParamList *p = node->func_def.params; p; p = p->next)
                 {
                     Operand param = routine->make_temp();
-                    sym.put(p->name, param.temp);
+                    sym.put(p->name, param);
                 }
 
                 gen_ir(*routine, node->func_def.body);
@@ -352,10 +352,10 @@ void print_ir(Routine &r)
         switch (q.op)
         {
         case IR::MOV_IM:
-            printf("temp%u \t%llu \t-\n", q.target.temp.id, q.left.int_value);
+            printf("temp%u \t%llu \t-\n", q.target.temp_id, q.left.int_value);
             break;
         case IR::MOV:
-            printf("temp%u \ttemp%u \t-\n", q.target.temp.id, q.left.temp.id);
+            printf("temp%u \ttemp%u \t-\n", q.target.temp_id, q.left.temp_id);
             break;
         case IR::MUL:
         case IR::IMUL:
@@ -363,25 +363,25 @@ void print_ir(Routine &r)
         case IR::SUB:
         case IR::EQ:
         case IR::LT:
-            printf("temp%u \ttemp%u \ttemp%u\n", q.target.temp.id, q.left.temp.id, q.right.temp.id);
+            printf("temp%u \ttemp%u \ttemp%u\n", q.target.temp_id, q.left.temp_id, q.right.temp_id);
             break;
         case IR::JMP:
             printf("%u \t- \t-\n", q.target.jump);
             break;
         case IR::JZ:
-            printf("%u \ttemp%u \t-\n", q.target.jump, q.left.temp.id);
+            printf("%u \ttemp%u \t-\n", q.target.jump, q.left.temp_id);
             break;
         case IR::CALL:
-            printf("temp%u \tfunc%u \t-\n", q.target.temp.id, q.left.temp.id);
+            printf("temp%u \tfunc%u \t-\n", q.target.temp_id, q.left.func_id);
             break;
         case IR::RET:
             if (q.target.int_value)
-                printf("temp%u \t- \t-\n", q.left.temp.id);
+                printf("temp%u \t- \t-\n", q.left.temp_id);
             else
                 printf("- \t- \t-\n");
             break;
         case IR::ARG:
-            printf("%u \ttemp%u \t-\n", q.target.temp.id, q.left.temp.id);
+            printf("%u \ttemp%u \t-\n", q.target.arg_index, q.left.temp_id);
             break;
         }
     }

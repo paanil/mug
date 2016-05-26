@@ -4,17 +4,11 @@
 #include "ir_gen.h"
 #include "str.h"
 
-#include <cstdint>
-
-// TODO: func id, arg index
-struct Temp
-{
-    uint32_t id;
-};
-
 union Operand
 {
-    Temp temp;
+    uint32_t temp_id;
+    uint32_t func_id;
+    uint32_t arg_index;
     uint32_t jump; // TODO: Label.
     uint64_t int_value;
 };
@@ -84,7 +78,7 @@ struct Routine
     Operand make_temp()
     {
         Operand result;
-        result.temp.id = next_temp_id++;
+        result.temp_id = next_temp_id++;
         return result;
     }
 
