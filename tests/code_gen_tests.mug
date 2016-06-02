@@ -1,0 +1,11 @@
+
+function f() -> int { return 42; }
+function f2(int a, int b) -> int { return a + b; }
+function f3(int a, int b) -> int { if (a < b) return 5; return 10; }
+
+function eq(int a, int b) -> bool { return a == b; }
+function ne(int a, int b) -> bool { return a != b; }
+function below(uint a, uint b) -> bool { return a < b; }
+function gt(int a, int b) -> bool { return a > b; }
+function le(int a, int b) -> bool { return a <= b; }
+function ge(int a, int b) -> bool { return a >= b; }

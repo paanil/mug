@@ -50,7 +50,7 @@ struct Alloc
     }
 
     template <class T>
-    T *allocate_array(int count)
+    T *allocate_array(unsigned count)
     {
         return (T *)allocate(sizeof(T) * count, alignof(T));
     }

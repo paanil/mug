@@ -134,8 +134,8 @@ struct AsmGen
     {
         regs.add_param_register("rcx");
         regs.add_param_register("rdx");
-        regs.add_param_register("r9");
         regs.add_param_register("r8");
+        regs.add_param_register("r9");
         regs.add_return_register("rax");
         regs.add_register("r10");
         regs.add_register("r11");
@@ -204,7 +204,11 @@ struct AsmGen
                 printf("\tadd %s, %s\n", target.name.data, right.name.data);
                 break;
             }
-            case IR::LT:
+            case IR::EQ: case IR::NE:
+            case IR::LT: case IR::BELOW:
+            case IR::GT: case IR::ABOVE:
+            case IR::LE: case IR::BE:
+            case IR::GE: case IR::AE:
             {
                 Register target = get_register_for(q.target.temp_id);
                 Register left = get_register_for(q.left.temp_id);
@@ -213,19 +217,42 @@ struct AsmGen
                 printf("\txor %s, %s\n", target.name.data, target.name.data);
                 printf("\tmov %s, 1\n", temp.name.data);
                 printf("\tcmp %s, %s\n", left.name.data, right.name.data);
-                printf("\tcmovl %s, %s\n", target.name.data, temp.name.data);
-                break;
-            }
-            case IR::BELOW:
-            {
-                Register target = get_register_for(q.target.temp_id);
-                Register left = get_register_for(q.left.temp_id);
-                Register right = get_register_for(q.right.temp_id);
-                Register temp = get_register();
-                printf("\txor %s, %s\n", target.name.data, target.name.data);
-                printf("\tmov %s, 1\n", temp.name.data);
-                printf("\tcmp %s, %s\n", left.name.data, right.name.data);
-                printf("\tcmovb %s, %s\n", target.name.data, temp.name.data);
+                switch (q.op)
+                {
+                    case IR::EQ:
+                        printf("\tcmove %s, %s\n", target.name.data, temp.name.data);
+                        break;
+                    case IR::NE:
+                        printf("\tcmovne %s, %s\n", target.name.data, temp.name.data);
+                        break;
+                    case IR::LT:
+                        printf("\tcmovl %s, %s\n", target.name.data, temp.name.data);
+                        break;
+                    case IR::BELOW:
+                        printf("\tcmovb %s, %s\n", target.name.data, temp.name.data);
+                        break;
+                    case IR::GT:
+                        printf("\tcmovg %s, %s\n", target.name.data, temp.name.data);
+                        break;
+                    case IR::ABOVE:
+                        printf("\tcmova %s, %s\n", target.name.data, temp.name.data);
+                        break;
+                    case IR::LE:
+                        printf("\tcmovle %s, %s\n", target.name.data, temp.name.data);
+                        break;
+                    case IR::BE:
+                        printf("\tcmovbe %s, %s\n", target.name.data, temp.name.data);
+                        break;
+                    case IR::GE:
+                        printf("\tcmovge %s, %s\n", target.name.data, temp.name.data);
+                        break;
+                    case IR::AE:
+                        printf("\tcmovae %s, %s\n", target.name.data, temp.name.data);
+                        break;
+                    default:
+                        assert(0 && "invalid default case!");
+                        break;
+                }
                 break;
             }
             case IR::JZ:
@@ -260,7 +287,7 @@ struct AsmGen
         printf("%s:\n", r.name.data);
         printf("\tpush rbp\n");
         printf("\tmov rbp, rsp\n");
-        printf("; ---\n");
+        printf("\n");
 
         for (uint32_t i = 0; i < r.param_count; i++)
         {
@@ -308,16 +335,44 @@ void gen_asm(IR ir)
     }
 }
 
-void gen_something()
+int compile(const char *file)
 {
     Alloc a;
-    ErrorContext ec(1);
-    Ast ast = parse(
-        "function f() -> int { return 42; }"
-        "function f2(int a, int b) -> int { return a + b; }"
-        "function f3(int a, int b) -> int { if (a < b) return 5; return 10; }",
-        a, ec);
-    check(ast, ec);
+    char *buf;
+
+    {
+        FILE *f = fopen(file, "rb");
+        if (f == nullptr)
+        {
+            fprintf(stderr, "error: couldn't open file '%s'", file);
+            return 1;
+        }
+
+        fseek(f, 0, SEEK_END);
+        unsigned size = ftell(f);
+        fseek(f, 0, SEEK_SET);
+
+        buf = a.allocate_array<char>(size + 1);
+        buf[size] = 0;
+
+        if (fread(buf, 1, size, f) != size)
+        {
+            fprintf(stderr, "error: couldn't read file '%s'", file);
+            fclose(f);
+            return 1;
+        }
+
+        fclose(f);
+    }
+
+    ErrorContext ec;
+    Ast ast = parse(buf, a, ec);
+    if (!check(ast, ec))
+    {
+        return 0;
+    }
+
     IR ir = gen_ir(ast, a);
     gen_asm(ir);
+    return 0;
 }

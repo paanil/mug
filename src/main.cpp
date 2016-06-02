@@ -1,11 +1,14 @@
 
 void run_tests();
 
-void gen_something();
+int compile(const char *);
 
-int main()
+int main(int argc, char **argv)
 {
-//    run_tests();
-    gen_something();
+    if (argc < 2)
+        run_tests();
+    else
+        return compile(argv[1]);
+
     return 0;
 }
