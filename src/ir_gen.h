@@ -10,9 +10,20 @@
     PASTE_TYPE(ADD)     \
     PASTE_TYPE(SUB)     \
     PASTE_TYPE(EQ)      \
+    PASTE_TYPE(NE)      \
     PASTE_TYPE(LT)      \
+    PASTE_TYPE(BELOW)   \
+    PASTE_TYPE(GT)      \
+    PASTE_TYPE(ABOVE)   \
+    PASTE_TYPE(LE)      \
+    PASTE_TYPE(BE)      \
+    PASTE_TYPE(GE)      \
+    PASTE_TYPE(AE)      \
+    PASTE_TYPE(XOR_IM)  \
     PASTE_TYPE(JMP)     \
     PASTE_TYPE(JZ)      \
+    PASTE_TYPE(JNZ)     \
+    PASTE_TYPE(LABEL)   \
     PASTE_TYPE(CALL)    \
     PASTE_TYPE(RET)     \
     PASTE_TYPE(ARG)

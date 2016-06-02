@@ -68,15 +68,48 @@ struct Evaluator
                 case IR::EQ:
                     set(q.target, get(q.left).uvalue == get(q.right).uvalue);
                     break;
+                case IR::NE:
+                    set(q.target, get(q.left).uvalue != get(q.right).uvalue);
+                    break;
                 case IR::LT:
+                    set(q.target, get(q.left).ivalue < get(q.right).ivalue);
+                    break;
+                case IR::BELOW:
                     set(q.target, get(q.left).uvalue < get(q.right).uvalue);
                     break;
+                case IR::GT:
+                    set(q.target, get(q.left).ivalue > get(q.right).ivalue);
+                    break;
+                case IR::ABOVE:
+                    set(q.target, get(q.left).uvalue > get(q.right).uvalue);
+                    break;
+                case IR::LE:
+                    set(q.target, get(q.left).ivalue <= get(q.right).ivalue);
+                    break;
+                case IR::BE:
+                    set(q.target, get(q.left).uvalue <= get(q.right).uvalue);
+                    break;
+                case IR::GE:
+                    set(q.target, get(q.left).ivalue >= get(q.right).ivalue);
+                    break;
+                case IR::AE:
+                    set(q.target, get(q.left).uvalue >= get(q.right).uvalue);
+                    break;
+                case IR::XOR_IM:
+                    set(q.target, get(q.left).uvalue ^ q.right.int_value);
+                    break;
                 case IR::JMP:
-                    i = q.target.jump - 1; // for loop will i++
+                    i = q.target.label;
                     break;
                 case IR::JZ:
                     if (get(q.left).uvalue == 0)
-                        i = q.target.jump - 1; // for loop will i++
+                        i = q.target.label;
+                    break;
+                case IR::JNZ:
+                    if (get(q.left).uvalue != 0)
+                        i = q.target.label;
+                    break;
+                case IR::LABEL:
                     break;
                 case IR::CALL:
                 {

@@ -9,7 +9,7 @@ union Operand
     uint32_t temp_id;
     uint32_t func_id;
     uint32_t arg_index;
-    uint32_t jump; // TODO: Label.
+    uint32_t label;
     uint64_t int_value;
     bool returns_something;
 };
@@ -58,6 +58,8 @@ struct Routine
 {
     uint32_t next_temp_id;
 
+    uint32_t param_count;
+
     uint32_t n;
     Quads *head;
     Quads *tail;
@@ -83,19 +85,15 @@ struct Routine
         return result;
     }
 
-    Operand make_jump_target()
+    Operand make_label(Alloc &a)
     {
         Operand result;
-        result.jump = n;
+        result.label = n;
+        add(Quad(IR::LABEL, result), a);
         return result;
     }
 
     Quad *add(Quad quad, Alloc &a);
-
-    void set_jump_target_here(Quad *quad)
-    {
-        quad->target.jump = n;
-    }
 
     Quad &operator [] (uint32_t index);
 };

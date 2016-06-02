@@ -4,6 +4,8 @@
 #include "str.h"
 #include "type.h"
 
+// TODO: Ast nodes should have line and column.
+
 #define DEF_EXP(Name) \
 struct Name { \
     ExpType type; \
@@ -176,6 +178,11 @@ struct Expression
         BinaryExp   binary;
     };
 };
+
+inline bool is_signed(Expression *exp)
+{
+    return (exp->data_type.type == Type::INT);
+}
 
 struct Node
 {

@@ -8,11 +8,6 @@ bool is_bool(Expression *exp)
     return (exp->data_type.type == Type::BOOL);
 }
 
-bool is_signed(Expression *exp)
-{
-    return (exp->data_type.type == Type::INT);
-}
-
 bool is_void(Expression *exp)
 {
     return (exp->data_type.type == Type::VOID);
