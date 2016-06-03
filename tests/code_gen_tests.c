@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdbool.h>
 
 typedef long long int i64;
 typedef unsigned long long int u64;
@@ -7,12 +8,14 @@ i64 f();
 i64 f2(i64 a, i64 b);
 i64 f3(i64 a, i64 b);
 
-i64 eq(i64 a, i64 b);
-i64 ne(i64 a, i64 b);
-i64 below(u64 a, u64 b);
-i64 gt(i64 a, i64 b);
-i64 le(i64 a, i64 b);
-i64 ge(i64 a, i64 b);
+bool eq(i64 a, i64 b);
+bool ne(i64 a, i64 b);
+bool below(u64 a, u64 b);
+bool gt(i64 a, i64 b);
+bool le(i64 a, i64 b);
+bool ge(i64 a, i64 b);
+
+bool g(bool x);
 
 #define TEST(x, y) { i64 z = x; printf(#x " -> %lld \t\t%s\n", z, (z == y) ? "OK" : "ERROR"); }
 
@@ -34,19 +37,24 @@ int main()
     TEST(f3(-20, 10), 5)
     TEST(f3(-20, -10), 5)
 
-    TEST(eq(100, 100), 1)
-    TEST(eq(100, -100), 0)
-    TEST(ne(100, -100), 1)
-    TEST(ne(100, 100), 0)
-    TEST(below(5, 100), 1)
-    TEST(below(-5, 100), 0)
-    TEST(gt(-5, 100), 0)
-    TEST(gt(-5, -100), 1)
-    TEST(le(-100, 100), 1)
-    TEST(le(100, 100), 1)
-    TEST(le(100, -100), 0)
-    TEST(ge(-100, 100), 0)
-    TEST(ge(100, 100), 1)
-    TEST(ge(100, -100), 1)
+    TEST(eq(100, 100), true)
+    TEST(eq(100, -100), false)
+    TEST(ne(100, -100), true)
+    TEST(ne(100, 100), false)
+    TEST(below(5, 100), true)
+    TEST(below(-5, 100), false)
+    TEST(gt(-5, 100), false)
+    TEST(gt(-5, -100), true)
+    TEST(le(-100, 100), true)
+    TEST(le(100, 100), true)
+    TEST(le(100, -100), false)
+    TEST(ge(-100, 100), false)
+    TEST(ge(100, 100), true)
+    TEST(ge(100, -100), true)
+
+    TEST(g(true), false)
+    TEST(g(false), true)
+    TEST(g(12345), false)
+
     return 0;
 }

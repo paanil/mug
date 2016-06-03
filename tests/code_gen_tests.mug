@@ -9,3 +9,5 @@ function below(uint a, uint b) -> bool { return a < b; }
 function gt(int a, int b) -> bool { return a > b; }
 function le(int a, int b) -> bool { return a <= b; }
 function ge(int a, int b) -> bool { return a >= b; }
+
+function g(bool x) -> bool { return !x; }

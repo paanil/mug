@@ -129,6 +129,7 @@ struct AsmGen
 
     RegisterAlloc regs;
     Temp temps[100];
+    FILE *f;
 
     AsmGen()
     {
@@ -192,7 +193,7 @@ struct AsmGen
             case IR::MOV_IM:
             {
                 Register reg = get_register_for(q.target.temp_id);
-                printf("\tmov %s, %llu\n", reg.name.data, q.left.int_value);
+                fprintf(f, "\tmov %s, %llu\n", reg.name.data, q.left.int_value);
                 break;
             }
             case IR::ADD:
@@ -200,8 +201,8 @@ struct AsmGen
                 Register target = get_register_for(q.target.temp_id);
                 Register left = get_register_for(q.left.temp_id);
                 Register right = get_register_for(q.right.temp_id);
-                printf("\tmov %s, %s\n", target.name.data, left.name.data);
-                printf("\tadd %s, %s\n", target.name.data, right.name.data);
+                fprintf(f, "\tmov %s, %s\n", target.name.data, left.name.data);
+                fprintf(f, "\tadd %s, %s\n", target.name.data, right.name.data);
                 break;
             }
             case IR::EQ: case IR::NE:
@@ -214,40 +215,40 @@ struct AsmGen
                 Register left = get_register_for(q.left.temp_id);
                 Register right = get_register_for(q.right.temp_id);
                 Register temp = get_register();
-                printf("\txor %s, %s\n", target.name.data, target.name.data);
-                printf("\tmov %s, 1\n", temp.name.data);
-                printf("\tcmp %s, %s\n", left.name.data, right.name.data);
+                fprintf(f, "\txor %s, %s\n", target.name.data, target.name.data);
+                fprintf(f, "\tmov %s, 1\n", temp.name.data);
+                fprintf(f, "\tcmp %s, %s\n", left.name.data, right.name.data);
                 switch (q.op)
                 {
                     case IR::EQ:
-                        printf("\tcmove %s, %s\n", target.name.data, temp.name.data);
+                        fprintf(f, "\tcmove %s, %s\n", target.name.data, temp.name.data);
                         break;
                     case IR::NE:
-                        printf("\tcmovne %s, %s\n", target.name.data, temp.name.data);
+                        fprintf(f, "\tcmovne %s, %s\n", target.name.data, temp.name.data);
                         break;
                     case IR::LT:
-                        printf("\tcmovl %s, %s\n", target.name.data, temp.name.data);
+                        fprintf(f, "\tcmovl %s, %s\n", target.name.data, temp.name.data);
                         break;
                     case IR::BELOW:
-                        printf("\tcmovb %s, %s\n", target.name.data, temp.name.data);
+                        fprintf(f, "\tcmovb %s, %s\n", target.name.data, temp.name.data);
                         break;
                     case IR::GT:
-                        printf("\tcmovg %s, %s\n", target.name.data, temp.name.data);
+                        fprintf(f, "\tcmovg %s, %s\n", target.name.data, temp.name.data);
                         break;
                     case IR::ABOVE:
-                        printf("\tcmova %s, %s\n", target.name.data, temp.name.data);
+                        fprintf(f, "\tcmova %s, %s\n", target.name.data, temp.name.data);
                         break;
                     case IR::LE:
-                        printf("\tcmovle %s, %s\n", target.name.data, temp.name.data);
+                        fprintf(f, "\tcmovle %s, %s\n", target.name.data, temp.name.data);
                         break;
                     case IR::BE:
-                        printf("\tcmovbe %s, %s\n", target.name.data, temp.name.data);
+                        fprintf(f, "\tcmovbe %s, %s\n", target.name.data, temp.name.data);
                         break;
                     case IR::GE:
-                        printf("\tcmovge %s, %s\n", target.name.data, temp.name.data);
+                        fprintf(f, "\tcmovge %s, %s\n", target.name.data, temp.name.data);
                         break;
                     case IR::AE:
-                        printf("\tcmovae %s, %s\n", target.name.data, temp.name.data);
+                        fprintf(f, "\tcmovae %s, %s\n", target.name.data, temp.name.data);
                         break;
                     default:
                         assert(0 && "invalid default case!");
@@ -255,16 +256,24 @@ struct AsmGen
                 }
                 break;
             }
+            case IR::XOR_IM:
+            {
+                Register target = get_register_for(q.target.temp_id);
+                Register left = get_register_for(q.left.temp_id);
+                fprintf(f, "\tmov %s, %s\n", target.name.data, left.name.data);
+                fprintf(f, "\txor %s, %llu\n", target.name.data, q.right.int_value);
+                break;
+            }
             case IR::JZ:
             {
                 Register left = get_register_for(q.left.temp_id);
-                printf("\tcmp %s, 0\n", left.name.data);
-                printf("\tje .l%u\n", q.target.label);
+                fprintf(f, "\tcmp %s, 0\n", left.name.data);
+                fprintf(f, "\tje .l%u\n", q.target.label);
                 break;
             }
             case IR::LABEL:
             {
-                printf(".l%u:\n", q.target.label);
+                fprintf(f, ".l%u:\n", q.target.label);
                 break;
             }
             case IR::RET:
@@ -274,20 +283,22 @@ struct AsmGen
                     Register ret = regs.get_return_register();
                     Register reg = get_register_for(q.left.temp_id);
                     if (ret.id != reg.id)
-                        printf("\tmov %s, %s\n", ret.name.data, reg.name.data);
+                        fprintf(f, "\tmov %s, %s\n", ret.name.data, reg.name.data);
                 }
-                printf("\tjmp .epi\n");
+                fprintf(f, "\tjmp .epi\n");
                 break;
             }
         }
     }
 
-    void gen_asm(Routine &r)
+    void gen_asm(Routine &r, FILE *out)
     {
-        printf("%s:\n", r.name.data);
-        printf("\tpush rbp\n");
-        printf("\tmov rbp, rsp\n");
-        printf("\n");
+        f = out;
+
+        fprintf(f, "%s:\n", r.name.data);
+        fprintf(f, "\tpush rbp\n");
+        fprintf(f, "\tmov rbp, rsp\n");
+        fprintf(f, "\n");
 
         for (uint32_t i = 0; i < r.param_count; i++)
         {
@@ -299,52 +310,52 @@ struct AsmGen
             gen_asm(r[i]);
         }
 
-        printf(".epi:\n");
-        printf("\tmov rsp, rbp\n");
-        printf("\tpop rbp\n");
-        printf("\tret\n\n");
+        fprintf(f, ".epi:\n");
+        fprintf(f, "\tmov rsp, rbp\n");
+        fprintf(f, "\tpop rbp\n");
+        fprintf(f, "\tret\n\n");
     }
 };
 
-void gen_asm(IR ir)
+void gen_asm(IR ir, FILE *f)
 {
     if (ir.routines == nullptr || ir.routines->next == nullptr)
     {
-        printf("ir is null!\n");
+        fprintf(stderr, "ir is null!\n");
         return;
     }
 
-//    print_ir(ir);
-//    printf("\n\n");
+    print_ir(ir);
+    fprintf(stdout, "\n\n");
 
     Routine *r = ir.routines->next;
     while (r)
     {
-        printf("\tglobal %s\n", r->name.data);
+        fprintf(f, "\tglobal %s\n", r->name.data);
         r = r->next;
     }
 
-    printf("\tsection .text\n");
+    fprintf(f, "\tsection .text\n");
 
     r = ir.routines->next;
     while (r)
     {
         AsmGen gen;
-        gen.gen_asm(*r);
+        gen.gen_asm(*r, f);
         r = r->next;
     }
 }
 
-int compile(const char *file)
+int compile(const char *source_file, const char *output_file)
 {
     Alloc a;
     char *buf;
 
     {
-        FILE *f = fopen(file, "rb");
+        FILE *f = fopen(source_file, "rb");
         if (f == nullptr)
         {
-            fprintf(stderr, "error: couldn't open file '%s'", file);
+            fprintf(stderr, "error: couldn't open file '%s'\n", source_file);
             return 1;
         }
 
@@ -357,7 +368,7 @@ int compile(const char *file)
 
         if (fread(buf, 1, size, f) != size)
         {
-            fprintf(stderr, "error: couldn't read file '%s'", file);
+            fprintf(stderr, "error: couldn't read file '%s'\n", source_file);
             fclose(f);
             return 1;
         }
@@ -373,6 +384,24 @@ int compile(const char *file)
     }
 
     IR ir = gen_ir(ast, a);
-    gen_asm(ir);
+
+    if (output_file)
+    {
+        FILE *f = fopen(output_file, "w");
+        if (f == nullptr)
+        {
+            fprintf(stderr, "error: couldn't open file '%s' for writing\n", output_file);
+            return 1;
+        }
+
+        gen_asm(ir, f);
+
+        fclose(f);
+    }
+    else
+    {
+        gen_asm(ir, stdout);
+    }
+
     return 0;
 }

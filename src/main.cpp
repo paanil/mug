@@ -1,14 +1,81 @@
+#include <cstdio>
 
 void run_tests();
 
-int compile(const char *);
+int compile(const char *, const char *);
 
-int main(int argc, char **argv)
+int main(int argc, const char **argv)
 {
     if (argc < 2)
         run_tests();
     else
-        return compile(argv[1]);
+    {
+        const char *s = nullptr;
+        const char *o = nullptr;
+        bool print_only = false;
+        char buf[256];
+
+        for (int i = 1; i < argc; i++)
+        {
+            const char *arg = argv[i];
+            if (arg[0] == '-')
+            {
+                if (arg[1] == 'o')
+                {
+                    if (arg[2])
+                        o = arg + 2;
+                    else if (i + 1 < argc)
+                        o = argv[++i];
+                    else
+                    {
+                        fprintf(stderr, "error: -o flag requires output file!\n");
+                        return 1;
+                    }
+                }
+                else if (arg[1] == 'p')
+                {
+                    print_only = true;
+                }
+                else
+                {
+                    fprintf(stderr, "warning: unrecognized parameter %s\n", arg);
+                }
+            }
+            else
+            {
+                if (s != nullptr)
+                {
+                    fprintf(stderr, "error: mug can handle only one source file at a time!\n");
+                    return 1;
+                }
+
+                s = arg;
+            }
+        }
+
+        if (s == nullptr)
+        {
+            fprintf(stderr, "error: source file not given!\n");
+            return 1;
+        }
+
+        if (o == nullptr && !print_only)
+        {
+            char *dest = buf;
+            for (unsigned i = 0; i < sizeof(buf) - 3; i++)
+            {
+                if (s[i] == 0 || s[i] == '.') break;
+                *dest++ = s[i];
+            }
+            *dest++ = '.';
+            *dest++ = 's';
+            *dest++ = 0;
+
+            o = buf;
+        }
+
+        return compile(s, print_only ? nullptr : o);
+    }
 
     return 0;
 }
