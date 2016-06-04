@@ -1,10 +1,10 @@
 #ifndef IR_GEN_H
 #define IR_GEN_H
 
-// TODO: DIV, IDIV, NEQU, comparisons for signed and unsigned ints...
 #define PASTE_TYPES     \
     PASTE_TYPE(MOV_IM)  \
     PASTE_TYPE(MOV)     \
+    PASTE_TYPE(NEG)     \
     PASTE_TYPE(MUL)     \
     PASTE_TYPE(IMUL)    \
     PASTE_TYPE(DIV)     \

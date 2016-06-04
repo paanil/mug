@@ -130,6 +130,117 @@ struct RegisterAlloc
     }
 };
 
+struct Code
+{
+    FILE *f;
+
+    Code(FILE *out)
+    : f(out)
+    {}
+
+    void global(Str name)
+    {
+        fprintf(f, "\t" "global %s\n", name.data);
+    }
+
+    void section_text()
+    {
+        fprintf(f, "\t" "section .text\n");
+    }
+
+    void prolog(Str func_name)
+    {
+
+        fprintf(f, "%s:\n", func_name.data);
+        fprintf(f, "\t" "push rbp\n");
+        fprintf(f, "\t" "mov rbp, rsp\n");
+        fprintf(f, "\n");
+    }
+
+    void epilog()
+    {
+        fprintf(f, ".epi:\n");
+        fprintf(f, "\t" "mov rsp, rbp\n");
+        fprintf(f, "\t" "pop rbp\n");
+        fprintf(f, "\t" "ret\n\n");
+    }
+
+    void mov(Register dest, uint64_t value)
+    {
+        fprintf(f, "\t" "mov %s, %llu\n", dest.name.data, value);
+    }
+
+    void xor_(Register reg, uint64_t value)
+    {
+        fprintf(f, "\t" "xor %s, %llu\n", reg.name.data, value);
+    }
+
+    void cmp(Register reg, uint64_t value)
+    {
+        fprintf(f, "\t" "cmp %s, %llu\n", reg.name.data, value);
+    }
+
+    void neg(Register reg)
+    {
+        fprintf(f, "\t" "neg %s\n", reg.name.data);
+    }
+
+    void zero(Register reg)
+    {
+        fprintf(f, "\t" "xor %s, %s\n", reg.name.data, reg.name.data);
+    }
+
+    void sign_extend_rax_to_rdx()
+    {
+        fprintf(f, "\t" "cqo\n");
+    }
+
+    void label(uint32_t label)
+    {
+        fprintf(f, ".l%u:\n", label);
+    }
+
+    void jmp_epi()
+    {
+        fprintf(f, "\t" "jmp .epi\n");
+    }
+
+    void je(uint32_t label)
+    {
+        fprintf(f, "\t" "je .l%u\n", label);
+    }
+
+#define INSTRUCTION(instr_name) \
+    void instr_name(Register r) { \
+        fprintf(f, "\t" #instr_name " %s\n", r.name.data); \
+    }
+
+    INSTRUCTION(mul)
+    INSTRUCTION(imul)
+    INSTRUCTION(div)
+    INSTRUCTION(idiv)
+
+#define INSTRUCTION2(instr_name) \
+    void instr_name(Register a, Register b) { \
+        fprintf(f, "\t" #instr_name " %s, %s\n", a.name.data, b.name.data); \
+    }
+
+    INSTRUCTION2(mov)
+    INSTRUCTION2(cmove)
+    INSTRUCTION2(cmovne)
+    INSTRUCTION2(cmovl)
+    INSTRUCTION2(cmovb)
+    INSTRUCTION2(cmovg)
+    INSTRUCTION2(cmova)
+    INSTRUCTION2(cmovle)
+    INSTRUCTION2(cmovbe)
+    INSTRUCTION2(cmovge)
+    INSTRUCTION2(cmovae)
+    INSTRUCTION2(add)
+    INSTRUCTION2(sub)
+    INSTRUCTION2(cmp)
+};
+
 struct AsmGen
 {
     struct Temp
@@ -141,9 +252,10 @@ struct AsmGen
 
     RegisterAlloc regs;
     Temp temps[100];
-    FILE *f;
+    Code &code;
 
-    AsmGen()
+    AsmGen(Code &code_)
+    : code(code_)
     {
         for (int i = 0; i < 100; i++)
         {
@@ -170,13 +282,14 @@ struct AsmGen
         if (temp_id < 0)
             return;
 
-        temps[temp_id].reg_id = Reg_NONE;
+//        temps[temp_id].reg_id = Reg_NONE;
         // TODO: spill
 
-//        Register src = regs.get_register_by_id(temps[temp_id].reg_id);
-//        Register reg = regs.alloc_any_register(temp_id);
-//        fprintf(f, "\tmov %s, %s \t; spill\n", reg.name.data, src.name.data);
-//        temps[temp_id].reg_id = reg.id;
+        // TODO: Remove this hack!
+        Register src = regs.get_register_by_id(temps[temp_id].reg_id);
+        Register reg = regs.alloc_any_register(temp_id);
+        code.mov(reg, src); // spill
+        temps[temp_id].reg_id = reg.id;
     }
 
     Register get_register(RegID reg_id)
@@ -224,39 +337,59 @@ struct AsmGen
             case IR::MOV_IM:
             {
                 Register reg = get_any_register_for(q.target.temp_id);
-                fprintf(f, "\tmov %s, %llu\n", reg.name.data, q.left.int_value);
+                code.mov(reg, q.left.int_value);
                 break;
             }
             //case IR::MOV:
-            case IR::MUL:
+            case IR::NEG:
             {
-                Register rax = get_register_for_no_unspill(Reg_rax, q.target.temp_id);
-//                /*Register rdx = */get_register(Reg_rdx);
+                Register target = get_any_register_for(q.target.temp_id);
                 Register left = get_any_register_for(q.left.temp_id);
-                Register right = get_any_register_for(q.right.temp_id);
-                fprintf(f, "\tmov %s, %s\n", rax.name.data, left.name.data);
-                fprintf(f, "\tmul %s\n", right.name.data);
+                code.mov(target, left);
+                code.neg(target);
                 break;
             }
-            case IR::IMUL:
+            case IR::MUL: case IR::IMUL:
+            case IR::DIV: case IR::IDIV:
+            {
+                Register rax = get_register_for_no_unspill(Reg_rax, q.target.temp_id);
+                Register rdx = get_register(Reg_rdx);
+                Register left = get_any_register_for(q.left.temp_id);
+                Register right = get_any_register_for(q.right.temp_id);
+                code.mov(rax, left);
+                switch (q.op)
+                {
+                    case IR::MUL:
+                        code.zero(rdx);
+                        code.mul(right);
+                        break;
+                    case IR::IMUL:
+                        code.sign_extend_rax_to_rdx();
+                        code.imul(right);
+                        break;
+                    case IR::DIV:
+                        code.zero(rdx);
+                        code.div(right);
+                        break;
+                    case IR::IDIV:
+                        code.sign_extend_rax_to_rdx();
+                        code.idiv(right);
+                        break;
+                    InvalidDefaultCase;
+                }
+                break;
+            }
             case IR::ADD:
-             case IR::SUB:
+            case IR::SUB:
             {
                 Register target = get_any_register_for(q.target.temp_id);
                 Register left = get_any_register_for(q.left.temp_id);
                 Register right = get_any_register_for(q.right.temp_id);
-                fprintf(f, "\tmov %s, %s\n", target.name.data, left.name.data);
+                code.mov(target, left);
                 switch (q.op)
                 {
-                    case IR::IMUL:
-                        fprintf(f, "\timul %s, %s\n", target.name.data, right.name.data);
-                        break;
-                    case IR::ADD:
-                        fprintf(f, "\tadd %s, %s\n", target.name.data, right.name.data);
-                        break;
-                    case IR::SUB:
-                        fprintf(f, "\tsub %s, %s\n", target.name.data, right.name.data);
-                        break;
+                    case IR::ADD: code.add(target, right); break;
+                    case IR::SUB: code.sub(target, right); break;
                     InvalidDefaultCase;
                 }
                 break;
@@ -271,41 +404,21 @@ struct AsmGen
                 Register left = get_any_register_for(q.left.temp_id);
                 Register right = get_any_register_for(q.right.temp_id);
                 Register temp = get_any_register();
-                fprintf(f, "\txor %s, %s\n", target.name.data, target.name.data);
-                fprintf(f, "\tmov %s, 1\n", temp.name.data);
-                fprintf(f, "\tcmp %s, %s\n", left.name.data, right.name.data);
+                code.zero(target);
+                code.mov(temp, 1);
+                code.cmp(left, right);
                 switch (q.op)
                 {
-                    case IR::EQ:
-                        fprintf(f, "\tcmove %s, %s\n", target.name.data, temp.name.data);
-                        break;
-                    case IR::NE:
-                        fprintf(f, "\tcmovne %s, %s\n", target.name.data, temp.name.data);
-                        break;
-                    case IR::LT:
-                        fprintf(f, "\tcmovl %s, %s\n", target.name.data, temp.name.data);
-                        break;
-                    case IR::BELOW:
-                        fprintf(f, "\tcmovb %s, %s\n", target.name.data, temp.name.data);
-                        break;
-                    case IR::GT:
-                        fprintf(f, "\tcmovg %s, %s\n", target.name.data, temp.name.data);
-                        break;
-                    case IR::ABOVE:
-                        fprintf(f, "\tcmova %s, %s\n", target.name.data, temp.name.data);
-                        break;
-                    case IR::LE:
-                        fprintf(f, "\tcmovle %s, %s\n", target.name.data, temp.name.data);
-                        break;
-                    case IR::BE:
-                        fprintf(f, "\tcmovbe %s, %s\n", target.name.data, temp.name.data);
-                        break;
-                    case IR::GE:
-                        fprintf(f, "\tcmovge %s, %s\n", target.name.data, temp.name.data);
-                        break;
-                    case IR::AE:
-                        fprintf(f, "\tcmovae %s, %s\n", target.name.data, temp.name.data);
-                        break;
+                    case IR::EQ:    code.cmove(target, temp);   break;
+                    case IR::NE:    code.cmovne(target, temp);  break;
+                    case IR::LT:    code.cmovl(target, temp);   break;
+                    case IR::BELOW: code.cmovb(target, temp);   break;
+                    case IR::GT:    code.cmovg(target, temp);   break;
+                    case IR::ABOVE: code.cmova(target, temp);   break;
+                    case IR::LE:    code.cmovle(target, temp);  break;
+                    case IR::BE:    code.cmovbe(target, temp);  break;
+                    case IR::GE:    code.cmovge(target, temp);  break;
+                    case IR::AE:    code.cmovae(target, temp);  break;
                     InvalidDefaultCase;
                 }
                 break;
@@ -314,8 +427,8 @@ struct AsmGen
             {
                 Register target = get_any_register_for(q.target.temp_id);
                 Register left = get_any_register_for(q.left.temp_id);
-                fprintf(f, "\tmov %s, %s\n", target.name.data, left.name.data);
-                fprintf(f, "\txor %s, %llu\n", target.name.data, q.right.int_value);
+                code.mov(target, left);
+                code.xor_(target, q.right.int_value);
                 break;
             }
             //case IR::JMP:
@@ -323,11 +436,11 @@ struct AsmGen
             //case IR::JNZ:
             {
                 Register left = get_any_register_for(q.left.temp_id);
-                fprintf(f, "\tcmp %s, 0\n", left.name.data);
+                code.cmp(left, 0);
                 switch (q.op)
                 {
                     case IR::JZ:
-                        fprintf(f, "\tje .l%u\n", q.target.label);
+                        code.je(q.target.label);
                         break;
                     //case IR::JNZ:
                     //    fprintf(f, "\tjne .l%u\n", q.target.label);
@@ -338,7 +451,7 @@ struct AsmGen
             }
             case IR::LABEL:
             {
-                fprintf(f, ".l%u:\n", q.target.label);
+                code.label(q.target.label);
                 break;
             }
             case IR::RET:
@@ -348,22 +461,17 @@ struct AsmGen
                     Register rax = regs.get_register_by_id(Reg_rax);
                     Register reg = get_any_register_for(q.left.temp_id);
                     if (rax.id != reg.id)
-                        fprintf(f, "\tmov %s, %s\n", rax.name.data, reg.name.data);
+                        code.mov(rax, reg);
                 }
-                fprintf(f, "\tjmp .epi\n");
+                code.jmp_epi();
                 break;
             }
         }
     }
 
-    void gen_asm(Routine &r, FILE *out)
+    void gen_asm(Routine &r)
     {
-        f = out;
-
-        fprintf(f, "%s:\n", r.name.data);
-        fprintf(f, "\tpush rbp\n");
-        fprintf(f, "\tmov rbp, rsp\n");
-        fprintf(f, "\n");
+        code.prolog(r.name);
 
         int param_count = r.param_count;
         for (int i = 0; i < param_count; i++)
@@ -376,10 +484,7 @@ struct AsmGen
             gen_asm(r[i]);
         }
 
-        fprintf(f, ".epi:\n");
-        fprintf(f, "\tmov rsp, rbp\n");
-        fprintf(f, "\tpop rbp\n");
-        fprintf(f, "\tret\n\n");
+        code.epilog();
     }
 };
 
@@ -394,20 +499,22 @@ void gen_asm(IR ir, FILE *f)
     print_ir(ir);
     fprintf(stdout, "\n\n");
 
+    Code code(f);
+
     Routine *r = ir.routines->next;
     while (r)
     {
-        fprintf(f, "\tglobal %s\n", r->name.data);
+        code.global(r->name);
         r = r->next;
     }
 
-    fprintf(f, "\tsection .text\n");
+    code.section_text();
 
     r = ir.routines->next;
     while (r)
     {
-        AsmGen gen;
-        gen.gen_asm(*r, f);
+        AsmGen gen(code);
+        gen.gen_asm(*r);
         r = r->next;
     }
 }

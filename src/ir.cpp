@@ -144,6 +144,7 @@ struct IRGen
                 {
                     case UnaryOp_NOT:
                     {
+                        // TODO: IR::NOT?
                         Operand one;
                         one.int_value = 1;
                         r.add(Quad(IR::XOR_IM, result, operand, one), a);
@@ -151,11 +152,7 @@ struct IRGen
                     }
                     case UnaryOp_NEG:
                     {
-                        Operand temp = r.make_temp();
-                        Operand zero;
-                        zero.int_value = 0;
-                        r.add(Quad(IR::MOV_IM, temp, zero), a);
-                        r.add(Quad(IR::SUB, result, temp, operand), a);
+                        r.add(Quad(IR::NEG, result, operand), a);
                         break;
                     }
                 }
@@ -413,6 +410,9 @@ void print_ir(Routine &r)
         case IR::MOV:
             fprintf(stdout, "temp%u \ttemp%u \t-\n", q.target.temp_id, q.left.temp_id);
             break;
+        case IR::NEG:
+            fprintf(stdout, "temp%u \ttemp%u \t-\n", q.target.temp_id, q.left.temp_id);
+            break;
         case IR::MUL:
         case IR::IMUL:
         case IR::DIV:
@@ -449,7 +449,7 @@ void print_ir(Routine &r)
                 fprintf(stdout, "- \t- \t-\n");
             break;
         case IR::ARG:
-            fprintf(stdout, "%u \ttemp%u \t-\n", q.target.arg_index, q.left.temp_id);
+            fprintf(stdout, "arg%u \ttemp%u \t-\n", q.target.arg_index, q.left.temp_id);
             break;
         }
     }

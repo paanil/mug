@@ -52,6 +52,9 @@ struct Evaluator
                 case IR::MOV:
                     set(q.target, get(q.left).uvalue);
                     break;
+                case IR::NEG:
+                    set(q.target, -get(q.left).ivalue);
+                    break;
                 case IR::MUL:
                     set(q.target, get(q.left).uvalue * get(q.right).uvalue);
                     break;

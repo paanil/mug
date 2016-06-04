@@ -21,6 +21,14 @@ bool g(bool x);
 u64 multiply(u64 a, u64 b);
 i64 imultiply(i64 a, i64 b);
 
+u64 divide(u64 a, u64 b);
+i64 idivide(i64 a, i64 b);
+
+i64 negate(i64 x);
+
+bool and_(bool a, bool b);
+bool or_(bool a, bool b);
+
 #define TEST(x, y) { i64 z = x; printf(#x " -> %lld \t\t%s\n", z, (z == y) ? "OK" : "ERROR"); }
 
 int main()
@@ -70,6 +78,22 @@ int main()
 
     TEST(multiply(-5ull, 5ull), -5ull * 5ull)
     TEST(imultiply(-5, 5), -5 * 5)
+
+    TEST(divide(10ull, 5ull), 2ull)
+    TEST(idivide(-10, 5), -2)
+
+    TEST(negate(-10), 10)
+    TEST(negate(5), -5)
+
+    TEST(and_(false, false), false)
+    TEST(and_(true, false), false)
+    TEST(and_(false, true), false)
+    TEST(and_(true, true), true)
+
+    TEST(or_(false, false), false)
+    TEST(or_(true, false), true)
+    TEST(or_(false, true), true)
+    TEST(or_(true, true), true)
 
     return 0;
 }

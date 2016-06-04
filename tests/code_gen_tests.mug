@@ -15,3 +15,11 @@ function g(bool x) -> bool { return !x; }
 
 function multiply(uint a, uint b) -> uint { return a * b; }
 function imultiply(int a, int b) -> int { return a * b; }
+
+function divide(uint a, uint b) -> uint { return a / b; }
+function idivide(int a, int b) -> int { return a / b; }
+
+function negate(int x) -> int { return -x; }
+
+function and_(bool a, bool b) -> bool { return (a && b); }
+function or_(bool a, bool b) -> bool { return (a || b); }
