@@ -23,3 +23,10 @@ function negate(int x) -> int { return -x; }
 
 function and_(bool a, bool b) -> bool { return (a && b); }
 function or_(bool a, bool b) -> bool { return (a || b); }
+
+function h(bool x) -> int {
+    int value;
+    if (x) value = 5;
+    else value = 10;
+    return value;
+}

@@ -29,6 +29,8 @@ i64 negate(i64 x);
 bool and_(bool a, bool b);
 bool or_(bool a, bool b);
 
+i64 h(bool x);
+
 #define TEST(x, y) { i64 z = x; printf(#x " -> %lld \t\t%s\n", z, (z == y) ? "OK" : "ERROR"); }
 
 int main()
@@ -94,6 +96,9 @@ int main()
     TEST(or_(true, false), true)
     TEST(or_(false, true), true)
     TEST(or_(true, true), true)
+
+    TEST(h(true), 5);
+    TEST(h(false), 10);
 
     return 0;
 }

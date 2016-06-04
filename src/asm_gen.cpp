@@ -205,9 +205,19 @@ struct Code
         fprintf(f, "\t" "jmp .epi\n");
     }
 
+    void jmp(uint32_t label)
+    {
+        fprintf(f, "\t" "jmp .l%u\n", label);
+    }
+
     void je(uint32_t label)
     {
         fprintf(f, "\t" "je .l%u\n", label);
+    }
+
+    void jne(uint32_t label)
+    {
+        fprintf(f, "\t" "jne .l%u\n", label);
     }
 
 #define INSTRUCTION(instr_name) \
@@ -340,7 +350,13 @@ struct AsmGen
                 code.mov(reg, q.left.int_value);
                 break;
             }
-            //case IR::MOV:
+            case IR::MOV:
+            {
+                Register target = get_any_register_for(q.target.temp_id);
+                Register left = get_any_register_for(q.left.temp_id);
+                code.mov(target, left);
+                break;
+            }
             case IR::NEG:
             {
                 Register target = get_any_register_for(q.target.temp_id);
@@ -431,20 +447,20 @@ struct AsmGen
                 code.xor_(target, q.right.int_value);
                 break;
             }
-            //case IR::JMP:
+            case IR::JMP:
+            {
+                code.jmp(q.target.label);
+                break;
+            }
             case IR::JZ:
-            //case IR::JNZ:
+            case IR::JNZ:
             {
                 Register left = get_any_register_for(q.left.temp_id);
                 code.cmp(left, 0);
                 switch (q.op)
                 {
-                    case IR::JZ:
-                        code.je(q.target.label);
-                        break;
-                    //case IR::JNZ:
-                    //    fprintf(f, "\tjne .l%u\n", q.target.label);
-                    //    break;
+                    case IR::JZ:  code.je(q.target.label);  break;
+                    case IR::JNZ: code.jne(q.target.label); break;
                     InvalidDefaultCase;
                 }
                 break;
