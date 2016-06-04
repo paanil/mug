@@ -7,6 +7,8 @@
     PASTE_TYPE(MOV)     \
     PASTE_TYPE(MUL)     \
     PASTE_TYPE(IMUL)    \
+    PASTE_TYPE(DIV)     \
+    PASTE_TYPE(IDIV)    \
     PASTE_TYPE(ADD)     \
     PASTE_TYPE(SUB)     \
     PASTE_TYPE(EQ)      \

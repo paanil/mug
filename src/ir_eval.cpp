@@ -58,6 +58,12 @@ struct Evaluator
                 case IR::IMUL:
                     set(q.target, get(q.left).ivalue * get(q.right).ivalue);
                     break;
+                case IR::DIV:
+                    set(q.target, get(q.left).uvalue / get(q.right).uvalue);
+                    break;
+                case IR::IDIV:
+                    set(q.target, get(q.left).ivalue / get(q.right).ivalue);
+                    break;
                 case IR::ADD:
                     set(q.target, get(q.left).uvalue + get(q.right).uvalue);
                     break;

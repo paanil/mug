@@ -181,7 +181,12 @@ struct IRGen
                         else
                             r.add(Quad(IR::MUL, result, left, right), a);
                         break;
-                    //case BinaryOp_DIV:
+                    case BinaryOp_DIV:
+                        if (is_signed(exp))
+                            r.add(Quad(IR::IDIV, result, left, right), a);
+                        else
+                            r.add(Quad(IR::DIV, result, left, right), a);
+                        break;
                     case BinaryOp_ADD:
                         r.add(Quad(IR::ADD, result, left, right), a);
                         break;
@@ -410,6 +415,8 @@ void print_ir(Routine &r)
             break;
         case IR::MUL:
         case IR::IMUL:
+        case IR::DIV:
+        case IR::IDIV:
         case IR::ADD:
         case IR::SUB:
         case IR::EQ: case IR::NE:

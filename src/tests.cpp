@@ -98,6 +98,12 @@ void run_ir_gen_tests()
     TEST("if (10 < 5 || true) 111; else 222;", 111)
     TEST("if (true && (false || true)) 111; else 222;", 111)
     TEST("if (false || (false && true)) 111; else 222;", 222)
+    TEST("int x = 11 / -5;", -2);
+    TEST("int x = 10 / 5;", 2);
+    TEST("int x = -9 / 5;", -1);
+    TEST("uint x = 11u / 5u;", 2);
+    TEST("uint x = 10u / 5u;", 2);
+    TEST("uint x = 9u / 5u;", 1);
 
     fprintf(stdout, "------------------------------\n");
     fprintf(stdout, "ran %d ir gen tests: %d succeeded, %d failed.\n\n\n", tests, tests - failed, failed);
