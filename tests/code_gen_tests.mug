@@ -2,6 +2,7 @@
 function f() -> int { return 42; }
 function f2(int a, int b) -> int { return a + b; }
 function f3(int a, int b) -> int { if (a < b) return 5; return 10; }
+function f4(int a, int b) -> int { return a - b; }
 
 function eq(int a, int b) -> bool { return a == b; }
 function ne(int a, int b) -> bool { return a != b; }

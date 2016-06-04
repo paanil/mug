@@ -240,7 +240,7 @@ struct AsmGen
             }
             case IR::IMUL:
             case IR::ADD:
-            // case IR::SUB:
+             case IR::SUB:
             {
                 Register target = get_any_register_for(q.target.temp_id);
                 Register left = get_any_register_for(q.left.temp_id);
@@ -254,9 +254,9 @@ struct AsmGen
                     case IR::ADD:
                         fprintf(f, "\tadd %s, %s\n", target.name.data, right.name.data);
                         break;
-                    //case IR::SUB:
-                    //    fprintf(f, "\tsub %s, %s\n", target.name.data, right.name.data);
-                    //    break;
+                    case IR::SUB:
+                        fprintf(f, "\tsub %s, %s\n", target.name.data, right.name.data);
+                        break;
                     InvalidDefaultCase;
                 }
                 break;

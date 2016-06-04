@@ -7,6 +7,7 @@ typedef unsigned long long int u64;
 i64 f();
 i64 f2(i64 a, i64 b);
 i64 f3(i64 a, i64 b);
+i64 f4(i64 a, i64 b);
 
 bool eq(i64 a, i64 b);
 bool ne(i64 a, i64 b);
@@ -26,11 +27,13 @@ int main()
 {
     TEST(f(), 42)
 
+    // a + b
     TEST(f2(25, 40), 65)
     TEST(f2(25, -40), -15)
     TEST(f2(-25, 40), 15)
     TEST(f2(-25, -40), -65)
 
+    // (a < b) ? 5 : 10
     TEST(f3(10, 20), 5)
     TEST(f3(10, -20), 10)
     TEST(f3(-10, 20), 5)
@@ -39,6 +42,12 @@ int main()
     TEST(f3(20, -10), 10)
     TEST(f3(-20, 10), 5)
     TEST(f3(-20, -10), 5)
+
+    // a - b
+    TEST(f4(25, 40), -15)
+    TEST(f4(25, -40), 65)
+    TEST(f4(-25, 40), -65)
+    TEST(f4(-25, -40), 15)
 
     TEST(eq(100, 100), true)
     TEST(eq(100, -100), false)
