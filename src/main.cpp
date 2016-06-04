@@ -6,6 +6,12 @@ int compile(const char *, const char *);
 
 int main(int argc, const char **argv)
 {
+    /*const char *args[] = {
+        "", "-p", "tests/code_gen_tests.mug"
+    };
+    argc = sizeof(args) / sizeof(*args);
+    argv = args;*/
+
     if (argc < 2)
         run_tests();
     else

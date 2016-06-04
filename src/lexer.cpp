@@ -189,7 +189,7 @@ Token Lexer::next_token()
                     }
                 }
 
-                assert(0 && "invalid code path!");
+                InvalidCodePath;
             }
 
             case '0'...'9':
@@ -215,7 +215,7 @@ Token Lexer::next_token()
                     }
                 }
 
-                assert(0 && "invalid code path!");
+                InvalidCodePath;
             }
 
             case ' ': case '\t': case '\r':
@@ -233,5 +233,5 @@ Token Lexer::next_token()
         }
     }
 
-    assert(0 && "invalid code path!");
+    InvalidCodePath;
 }

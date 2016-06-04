@@ -3,72 +3,95 @@
 #include "parser.h"
 #include "alloc.h"
 #include "error_context.h"
+#include "assert.h"
 
 #include <cstdio>
-#include <cassert>
+
+#define PASTE_REGS  \
+    PASTE_REG(rax)  \
+    PASTE_REG(rcx)  \
+    PASTE_REG(rdx)  \
+    PASTE_REG(r8)   \
+    PASTE_REG(r9)   \
+    PASTE_REG(r10)  \
+    PASTE_REG(r11)
+
+#define PASTE_REG(r) Reg_##r,
+
+enum RegID
+{
+    Reg_NONE = -1,
+
+    PASTE_REGS
+
+    Reg_COUNT
+};
+
+#undef PASTE_REG
 
 struct Register
 {
     Str name; // We might want to put registers in a StrMap (?) => not just c-string.
-    int32_t id; // Actually just an index.
+    RegID id; // Actually just an index.
     int32_t temp_id; // Temp currently in the register or -1 if none.
 };
 
-#define MAX_REGISTERS 20
-#define MAX_PARAM_REGISTERS 10
+#define PARAM_REG_COUNT 4
 
 struct RegisterAlloc
 {
-    int32_t register_count;
-    int32_t return_register;
-    int32_t param_register_count;
-    int32_t param_registers[MAX_PARAM_REGISTERS];
-    int32_t register_queue[MAX_REGISTERS]; // Used for least recently used allocation.
-    Register registers[MAX_REGISTERS];
+    RegID param_registers[PARAM_REG_COUNT];
+    RegID register_queue[Reg_COUNT]; // Used for least recently used allocation.
+    Register registers[Reg_COUNT];
+
+#define PASTE_REG(r) registers[Reg_##r] = (Register){ Str::make(#r), Reg_##r, -1 };
 
     RegisterAlloc()
-    : register_count()
-    , return_register()
-    , param_register_count()
-    {}
-
-    void add_register(const char *name)
     {
-        assert(register_count < MAX_REGISTERS);
 
-        int32_t index = register_count++;
+        param_registers[0] = Reg_rcx;
+        param_registers[1] = Reg_rdx;
+        param_registers[2] = Reg_r8;
+        param_registers[3] = Reg_r9;
 
-        registers[index].name = Str::make(name);
-        registers[index].id = index;
-        registers[index].temp_id = -1;
-        register_queue[index] = index;
+        for (int i = 0; i < Reg_COUNT; i++)
+            register_queue[i] = (RegID)i;
+
+        PASTE_REGS
     }
 
-    void add_return_register(const char *name)
-    {
-        return_register = register_count;
-        add_register(name);
-    }
+#undef PASTE_REG
 
-    void add_param_register(const char *name)
+    void move_back_in_queue(int queue_index)
     {
-        assert(param_register_count < MAX_PARAM_REGISTERS);
-
-        param_registers[param_register_count++] = register_count;
-        add_register(name);
-    }
-
-    void move_back_in_queue(int32_t index)
-    {
-        int32_t reg_id = register_queue[index];
-        for (int i = index + 1; i < register_count; i++)
+        RegID reg_id = register_queue[queue_index];
+        for (int i = queue_index + 1; i < Reg_COUNT; i++)
             register_queue[i - 1] = register_queue[i];
-        register_queue[register_count - 1] = reg_id;
+        register_queue[Reg_COUNT - 1] = reg_id;
     }
 
-    Register alloc_register(int32_t temp_id)
+    Register alloc_register(RegID reg_id, int32_t temp_id)
     {
-        int32_t reg_id = register_queue[0];
+        assert(reg_id != Reg_NONE);
+        assert(reg_id < Reg_COUNT);
+
+        for (int i = 0; i < Reg_COUNT; i++)
+        {
+            if (register_queue[i] == reg_id)
+            {
+                move_back_in_queue(i);
+                break;
+            }
+        }
+
+        Register reg = registers[reg_id];
+        registers[reg_id].temp_id = temp_id;
+        return reg;
+    }
+
+    Register alloc_any_register(int32_t temp_id)
+    {
+        RegID reg_id = register_queue[0];
 
         move_back_in_queue(0);
 
@@ -77,14 +100,14 @@ struct RegisterAlloc
         return reg;
     }
 
-    bool alloc_param_register(int32_t param_index, int32_t *reg)
+    bool alloc_param_register(int param_index, Register *reg)
     {
-        if(param_index >= param_register_count)
+        if(param_index >= PARAM_REG_COUNT)
             return false;
 
-        int32_t reg_id = param_registers[param_index];
+        RegID reg_id = param_registers[param_index];
 
-        for (int i = 0; i < register_count; i++)
+        for (int i = 0; i < Reg_COUNT; i++)
         {
             if (register_queue[i] == reg_id)
             {
@@ -93,28 +116,17 @@ struct RegisterAlloc
             }
         }
 
+        *reg = registers[reg_id];
         registers[reg_id].temp_id = param_index;
-        *reg = reg_id;
         return true;
     }
 
-    Register get_register(int32_t reg_id)
+    Register get_register_by_id(RegID reg_id)
     {
-        assert(reg_id < register_count);
-        for (int i = 0; i < register_count; i++)
-        {
-            if (register_queue[i] == reg_id)
-            {
-                move_back_in_queue(i);
-                break;
-            }
-        }
-        return registers[reg_id];
-    }
+        assert(reg_id != Reg_NONE);
+        assert(reg_id < Reg_COUNT);
 
-    Register get_return_register()
-    {
-        return registers[return_register];
+        return registers[reg_id];
     }
 };
 
@@ -122,7 +134,7 @@ struct AsmGen
 {
     struct Temp
     {
-        int32_t reg_id; // Register that has the temp in it or -1 if none.
+        RegID reg_id; // Register that has the temp in it or none.
 //        int32_t stack_offset;
 //        bool spilled;
     };
@@ -133,26 +145,18 @@ struct AsmGen
 
     AsmGen()
     {
-        regs.add_param_register("rcx");
-        regs.add_param_register("rdx");
-        regs.add_param_register("r8");
-        regs.add_param_register("r9");
-        regs.add_return_register("rax");
-        regs.add_register("r10");
-        regs.add_register("r11");
-
         for (int i = 0; i < 100; i++)
         {
-            temps[i].reg_id= -1;
+            temps[i].reg_id = Reg_NONE;
         }
     }
 
-    void alloc_param(int32_t param_index)
+    void alloc_param(int param_index)
     {
-        int32_t reg_id;
-        if (regs.alloc_param_register(param_index, &reg_id))
+        Register reg;
+        if (regs.alloc_param_register(param_index, &reg))
         {
-            temps[param_index].reg_id = reg_id;
+            temps[param_index].reg_id = reg.id;
         }
         else
         {
@@ -161,23 +165,50 @@ struct AsmGen
         }
     }
 
-    Register get_register(int32_t temp_id = -1)
+    void spill(int32_t temp_id)
     {
-        Register reg = regs.alloc_register(temp_id);
-        if (reg.temp_id >= 0)
-        {
-            // spill
-        }
+        if (temp_id < 0)
+            return;
+
+        temps[temp_id].reg_id = Reg_NONE;
+        // TODO: spill
+
+//        Register src = regs.get_register_by_id(temps[temp_id].reg_id);
+//        Register reg = regs.alloc_any_register(temp_id);
+//        fprintf(f, "\tmov %s, %s \t; spill\n", reg.name.data, src.name.data);
+//        temps[temp_id].reg_id = reg.id;
+    }
+
+    Register get_register(RegID reg_id)
+    {
+        Register reg = regs.alloc_register(reg_id, -1);
+        spill(reg.temp_id);
         return reg;
     }
 
-    Register get_register_for(int32_t temp_id)
+    Register get_register_for_no_unspill(RegID reg_id, int32_t temp_id)
+    {
+        Register reg = regs.alloc_register(reg_id, temp_id);
+        spill(reg.temp_id);
+        temps[temp_id].reg_id = reg.id;
+        return reg;
+    }
+
+    Register get_any_register()
+    {
+        Register reg = regs.alloc_any_register(-1);
+        spill(reg.temp_id);
+        return reg;
+    }
+
+    Register get_any_register_for(int32_t temp_id)
     {
         Temp temp = temps[temp_id];
         if (temp.reg_id >= 0)
-            return regs.get_register(temp.reg_id);
+            return regs.get_register_by_id(temp.reg_id);
 
-        Register reg = get_register(temp_id);
+        Register reg = regs.alloc_any_register(temp_id);
+        spill(reg.temp_id);
 //        if (temp.spilled)
 //        {
 //            // load
@@ -192,17 +223,42 @@ struct AsmGen
         {
             case IR::MOV_IM:
             {
-                Register reg = get_register_for(q.target.temp_id);
+                Register reg = get_any_register_for(q.target.temp_id);
                 fprintf(f, "\tmov %s, %llu\n", reg.name.data, q.left.int_value);
                 break;
             }
-            case IR::ADD:
+            //case IR::MOV:
+            case IR::MUL:
             {
-                Register target = get_register_for(q.target.temp_id);
-                Register left = get_register_for(q.left.temp_id);
-                Register right = get_register_for(q.right.temp_id);
+                Register rax = get_register_for_no_unspill(Reg_rax, q.target.temp_id);
+//                /*Register rdx = */get_register(Reg_rdx);
+                Register left = get_any_register_for(q.left.temp_id);
+                Register right = get_any_register_for(q.right.temp_id);
+                fprintf(f, "\tmov %s, %s\n", rax.name.data, left.name.data);
+                fprintf(f, "\tmul %s\n", right.name.data);
+                break;
+            }
+            case IR::IMUL:
+            case IR::ADD:
+            // case IR::SUB:
+            {
+                Register target = get_any_register_for(q.target.temp_id);
+                Register left = get_any_register_for(q.left.temp_id);
+                Register right = get_any_register_for(q.right.temp_id);
                 fprintf(f, "\tmov %s, %s\n", target.name.data, left.name.data);
-                fprintf(f, "\tadd %s, %s\n", target.name.data, right.name.data);
+                switch (q.op)
+                {
+                    case IR::IMUL:
+                        fprintf(f, "\timul %s, %s\n", target.name.data, right.name.data);
+                        break;
+                    case IR::ADD:
+                        fprintf(f, "\tadd %s, %s\n", target.name.data, right.name.data);
+                        break;
+                    //case IR::SUB:
+                    //    fprintf(f, "\tsub %s, %s\n", target.name.data, right.name.data);
+                    //    break;
+                    InvalidDefaultCase;
+                }
                 break;
             }
             case IR::EQ: case IR::NE:
@@ -211,10 +267,10 @@ struct AsmGen
             case IR::LE: case IR::BE:
             case IR::GE: case IR::AE:
             {
-                Register target = get_register_for(q.target.temp_id);
-                Register left = get_register_for(q.left.temp_id);
-                Register right = get_register_for(q.right.temp_id);
-                Register temp = get_register();
+                Register target = get_any_register_for(q.target.temp_id);
+                Register left = get_any_register_for(q.left.temp_id);
+                Register right = get_any_register_for(q.right.temp_id);
+                Register temp = get_any_register();
                 fprintf(f, "\txor %s, %s\n", target.name.data, target.name.data);
                 fprintf(f, "\tmov %s, 1\n", temp.name.data);
                 fprintf(f, "\tcmp %s, %s\n", left.name.data, right.name.data);
@@ -250,25 +306,34 @@ struct AsmGen
                     case IR::AE:
                         fprintf(f, "\tcmovae %s, %s\n", target.name.data, temp.name.data);
                         break;
-                    default:
-                        assert(0 && "invalid default case!");
-                        break;
+                    InvalidDefaultCase;
                 }
                 break;
             }
             case IR::XOR_IM:
             {
-                Register target = get_register_for(q.target.temp_id);
-                Register left = get_register_for(q.left.temp_id);
+                Register target = get_any_register_for(q.target.temp_id);
+                Register left = get_any_register_for(q.left.temp_id);
                 fprintf(f, "\tmov %s, %s\n", target.name.data, left.name.data);
                 fprintf(f, "\txor %s, %llu\n", target.name.data, q.right.int_value);
                 break;
             }
+            //case IR::JMP:
             case IR::JZ:
+            //case IR::JNZ:
             {
-                Register left = get_register_for(q.left.temp_id);
+                Register left = get_any_register_for(q.left.temp_id);
                 fprintf(f, "\tcmp %s, 0\n", left.name.data);
-                fprintf(f, "\tje .l%u\n", q.target.label);
+                switch (q.op)
+                {
+                    case IR::JZ:
+                        fprintf(f, "\tje .l%u\n", q.target.label);
+                        break;
+                    //case IR::JNZ:
+                    //    fprintf(f, "\tjne .l%u\n", q.target.label);
+                    //    break;
+                    InvalidDefaultCase;
+                }
                 break;
             }
             case IR::LABEL:
@@ -280,10 +345,10 @@ struct AsmGen
             {
                 if (q.target.returns_something)
                 {
-                    Register ret = regs.get_return_register();
-                    Register reg = get_register_for(q.left.temp_id);
-                    if (ret.id != reg.id)
-                        fprintf(f, "\tmov %s, %s\n", ret.name.data, reg.name.data);
+                    Register rax = regs.get_register_by_id(Reg_rax);
+                    Register reg = get_any_register_for(q.left.temp_id);
+                    if (rax.id != reg.id)
+                        fprintf(f, "\tmov %s, %s\n", rax.name.data, reg.name.data);
                 }
                 fprintf(f, "\tjmp .epi\n");
                 break;
@@ -300,7 +365,8 @@ struct AsmGen
         fprintf(f, "\tmov rbp, rsp\n");
         fprintf(f, "\n");
 
-        for (uint32_t i = 0; i < r.param_count; i++)
+        int param_count = r.param_count;
+        for (int i = 0; i < param_count; i++)
         {
             alloc_param(i);
         }

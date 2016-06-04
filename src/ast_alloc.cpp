@@ -1,7 +1,6 @@
 #include "ast_alloc.h"
 #include "alloc.h"
-
-#include <cassert>
+#include "assert.h"
 
 Str AstAlloc::push_str(Str s)
 {
@@ -70,9 +69,7 @@ Expression *AstAlloc::unary_exp(Expression *operand, Token::Type op)
     {
     case Token::NOT:   exp->op = UnaryOp_NOT; break;
     case Token::MINUS: exp->op = UnaryOp_NEG; break;
-    default:
-        assert(0 && "invalid code path!");
-        break;
+    InvalidDefaultCase;
     }
 
     return (Expression *)exp;
@@ -98,9 +95,7 @@ Expression *AstAlloc::binary_exp(Expression *left, Expression *right, Token::Typ
         case Token::GE:    exp->op = BinaryOp_GE;  break;
         case Token::AND:   exp->op = BinaryOp_AND; break;
         case Token::OR:    exp->op = BinaryOp_OR;  break;
-        default:
-            assert(0 && "invalid code path!");
-            break;
+        InvalidDefaultCase;
     }
 
     return (Expression *)exp;

@@ -1,9 +1,10 @@
 #ifndef STACK_H
 #define STACK_H
 
+#include "assert.h"
+
 #include <cstdint>
 #include <cstdlib>
-#include <cassert>
 
 template <class T>
 struct Stack

@@ -17,6 +17,9 @@ bool ge(i64 a, i64 b);
 
 bool g(bool x);
 
+u64 multiply(u64 a, u64 b);
+i64 imultiply(i64 a, i64 b);
+
 #define TEST(x, y) { i64 z = x; printf(#x " -> %lld \t\t%s\n", z, (z == y) ? "OK" : "ERROR"); }
 
 int main()
@@ -55,6 +58,9 @@ int main()
     TEST(g(true), false)
     TEST(g(false), true)
     TEST(g(12345), false)
+
+    TEST(multiply(-5ull, 5ull), -5ull * 5ull)
+    TEST(imultiply(-5, 5), -5 * 5)
 
     return 0;
 }

@@ -1,7 +1,7 @@
 #include "alloc.h"
+#include "assert.h"
 
 #include <cstdlib>
-#include <cassert>
 
 char *Alloc::align(char *ptr, unsigned alignment)
 {

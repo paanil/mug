@@ -22,8 +22,7 @@ bool can_cast(Type from, Type to)
         case Type::UINT: return (to.type == Type::INT || to.type == Type::UINT);
         case Type::BOOL: return (to.type == Type::BOOL);
         case Type::FUNC: return false;
-        default:
-            assert(0 && "invalid code path!");
+        InvalidDefaultCase;
     }
     return false;
 }

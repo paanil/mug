@@ -1,7 +1,6 @@
 #include "ir_eval.h"
 #include "ir.h"
-
-#include <cassert>
+#include "assert.h"
 
 union Value
 {

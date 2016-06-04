@@ -2,9 +2,9 @@
 #include "ast.h"
 #include "sym_table.h"
 #include "alloc.h"
+#include "assert.h"
 
 #include <cstdio>
-#include <cassert>
 
 
 //
@@ -242,7 +242,7 @@ struct IRGen
             }
         }
 
-        assert(0 && "invalid code path!");
+        InvalidCodePath;
         return {};
     }
 
