@@ -251,7 +251,7 @@ struct Code
     INSTRUCTION2(cmp)
 };
 
-struct AsmGen
+struct CodeGen
 {
     struct Temp
     {
@@ -264,7 +264,7 @@ struct AsmGen
     Temp temps[100];
     Code &code;
 
-    AsmGen(Code &code_)
+    CodeGen(Code &code_)
     : code(code_)
     {
         for (int i = 0; i < 100; i++)
@@ -340,7 +340,7 @@ struct AsmGen
         return reg;
     }
 
-    void gen_asm(Quad q)
+    void gen_code(Quad q)
     {
         switch (q.op)
         {
@@ -485,7 +485,7 @@ struct AsmGen
         }
     }
 
-    void gen_asm(Routine &r)
+    void gen_code(Routine &r)
     {
         code.prolog(r.name);
 
@@ -497,14 +497,14 @@ struct AsmGen
 
         for (uint32_t i = 0; i < r.n; i++)
         {
-            gen_asm(r[i]);
+            gen_code(r[i]);
         }
 
         code.epilog();
     }
 };
 
-void gen_asm(IR ir, FILE *f)
+void gen_code(IR ir, FILE *f)
 {
     if (ir.routines == nullptr || ir.routines->next == nullptr)
     {
@@ -529,8 +529,8 @@ void gen_asm(IR ir, FILE *f)
     r = ir.routines->next;
     while (r)
     {
-        AsmGen gen(code);
-        gen.gen_asm(*r);
+        CodeGen gen(code);
+        gen.gen_code(*r);
         r = r->next;
     }
 }
@@ -583,13 +583,13 @@ int compile(const char *source_file, const char *output_file)
             return 1;
         }
 
-        gen_asm(ir, f);
+        gen_code(ir, f);
 
         fclose(f);
     }
     else
     {
-        gen_asm(ir, stdout);
+        gen_code(ir, stdout);
     }
 
     return 0;
