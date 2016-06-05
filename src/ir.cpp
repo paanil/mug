@@ -145,18 +145,11 @@ struct IRGen
                 switch (exp->unary.op)
                 {
                     case UnaryOp_NOT:
-                    {
-                        // TODO: IR::NOT?
-                        Operand one;
-                        one.int_value = 1;
-                        r.add(IR::XOR_IM, result, operand, one);
+                        r.add(IR::NOT, result, operand);
                         break;
-                    }
                     case UnaryOp_NEG:
-                    {
                         r.add(IR::NEG, result, operand);
                         break;
-                    }
                 }
 
                 return result;
@@ -401,6 +394,7 @@ void print_ir(Routine *routine)
         case IR::MOV:
             fprintf(stdout, "temp%u \ttemp%u \t-\n", quad.target.temp_id, quad.left.temp_id);
             break;
+        case IR::NOT:
         case IR::NEG:
             fprintf(stdout, "temp%u \ttemp%u \t-\n", quad.target.temp_id, quad.left.temp_id);
             break;
@@ -413,9 +407,6 @@ void print_ir(Routine *routine)
         case IR::LE: case IR::BE:
         case IR::GE: case IR::AE:
             fprintf(stdout, "temp%u \ttemp%u \ttemp%u\n", quad.target.temp_id, quad.left.temp_id, quad.right.temp_id);
-            break;
-        case IR::XOR_IM:
-            fprintf(stdout, "temp%u \ttemp%u \t%llu\n", quad.target.temp_id, quad.left.temp_id, quad.right.int_value);
             break;
         case IR::JMP:
             fprintf(stdout, "label%u \t- \t-\n", quad.target.label);

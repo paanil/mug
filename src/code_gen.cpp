@@ -383,6 +383,14 @@ struct CodeGen
                 code.mov(target, left);
                 break;
             }
+            case IR::NOT:
+            {
+                Register target = get_any_register_for(q.target.temp_id, false);
+                Register left = get_any_register_for(q.left.temp_id, true);
+                code.mov(target, left);
+                code.xor_(target, 1);
+                break;
+            }
             case IR::NEG:
             {
                 Register target = get_any_register_for(q.target.temp_id, false);
@@ -463,14 +471,6 @@ struct CodeGen
                     case IR::AE:    code.cmovae(target, temp);  break;
                     InvalidDefaultCase;
                 }
-                break;
-            }
-            case IR::XOR_IM:
-            {
-                Register target = get_any_register_for(q.target.temp_id, false);
-                Register left = get_any_register_for(q.left.temp_id, true);
-                code.mov(target, left);
-                code.xor_(target, q.right.int_value);
                 break;
             }
             case IR::JMP:

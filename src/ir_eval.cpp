@@ -57,6 +57,9 @@ struct Evaluator
                 case IR::MOV:
                     set(quad.target, get(quad.left).uvalue);
                     break;
+                case IR::NOT:
+                    set(quad.target, !get(quad.left).uvalue);
+                    break;
                 case IR::NEG:
                     set(quad.target, -get(quad.left).ivalue);
                     break;
@@ -107,9 +110,6 @@ struct Evaluator
                     break;
                 case IR::AE:
                     set(quad.target, get(quad.left).uvalue >= get(quad.right).uvalue);
-                    break;
-                case IR::XOR_IM:
-                    set(quad.target, get(quad.left).uvalue ^ quad.right.int_value);
                     break;
                 case IR::JMP:
                     i = quad.target.label;

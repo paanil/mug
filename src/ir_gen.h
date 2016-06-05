@@ -4,6 +4,7 @@
 #define PASTE_TYPES     \
     PASTE_TYPE(MOV_IM)  \
     PASTE_TYPE(MOV)     \
+    PASTE_TYPE(NOT)     \
     PASTE_TYPE(NEG)     \
     PASTE_TYPE(MUL)     \
     PASTE_TYPE(IMUL)    \
@@ -21,7 +22,6 @@
     PASTE_TYPE(BE)      \
     PASTE_TYPE(GE)      \
     PASTE_TYPE(AE)      \
-    PASTE_TYPE(XOR_IM)  \
     PASTE_TYPE(JMP)     \
     PASTE_TYPE(JZ)      \
     PASTE_TYPE(JNZ)     \
