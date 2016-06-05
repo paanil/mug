@@ -43,7 +43,9 @@ struct Routine
     uint32_t id;
     Routine *next;
 
-    Routine(Str name_, uint32_t id_)
+    Alloc &a;
+
+    Routine(Str name_, uint32_t id_, Alloc &a_)
     : next_temp_id()
     , n()
     , head()
@@ -51,6 +53,7 @@ struct Routine
     , name(name_)
     , id(id_)
     , next()
+    , a(a_)
     {}
 
     Operand make_temp()
@@ -60,24 +63,24 @@ struct Routine
         return result;
     }
 
-    Operand make_label(Alloc &a)
+    Operand make_label()
     {
         Operand result;
         result.label = n;
-        add(a, IR::LABEL, result);
+        add(IR::LABEL, result);
         return result;
     }
 
-    Quad *add(Alloc &a, Quad quad);
+    Quad *add(Quad quad);
 
-    Quad *add(Alloc &a, IR::Type op)
-    { return add(a, (Quad){op, {}, {}, {}}); }
-    Quad *add(Alloc &a, IR::Type op, Operand target)
-    { return add(a, (Quad){op, target, {}, {}}); }
-    Quad *add(Alloc &a, IR::Type op, Operand target, Operand operand)
-    { return add(a, (Quad){op, target, operand, {}}); }
-    Quad *add(Alloc &a, IR::Type op, Operand target, Operand left, Operand right)
-    { return add(a, (Quad){op, target, left, right}); }
+    Quad *add(IR::Type op)
+    { return add((Quad){op, {}, {}, {}}); }
+    Quad *add(IR::Type op, Operand target)
+    { return add((Quad){op, target, {}, {}}); }
+    Quad *add(IR::Type op, Operand target, Operand operand)
+    { return add((Quad){op, target, operand, {}}); }
+    Quad *add(IR::Type op, Operand target, Operand left, Operand right)
+    { return add((Quad){op, target, left, right}); }
 
     Quad &operator [] (uint32_t index);
 };
