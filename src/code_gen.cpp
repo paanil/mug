@@ -494,19 +494,20 @@ struct CodeGen
         }
     }
 
-    void gen_code(Routine &r)
+    void gen_code(Routine *routine)
     {
-        code.prolog(r.name, 16*8);
+        code.prolog(routine->name, 16*8);
 
-        int param_count = r.param_count;
+        int param_count = routine->param_count;
         for (int i = 0; i < param_count; i++)
         {
             alloc_param(i);
         }
 
-        for (uint32_t i = 0; i < r.n; i++)
+        int quad_count = routine->quad_count;
+        for (int i = 0; i < quad_count; i++)
         {
-            gen_code(r[i]);
+            gen_code((*routine)[i]);
         }
 
         code.epilog();
@@ -526,20 +527,20 @@ void gen_code(IR ir, FILE *f)
 
     Code code(f);
 
-    Routine *r = ir.routines->next;
-    while (r)
+    Routine *routine = ir.routines->next;
+    while (routine)
     {
-        code.global(r->name);
-        r = r->next;
+        code.global(routine->name);
+        routine = routine->next;
     }
 
     code.section_text();
 
-    r = ir.routines->next;
-    while (r)
+    routine = ir.routines->next;
+    while (routine)
     {
         CodeGen gen(code);
-        gen.gen_code(*r);
-        r = r->next;
+        gen.gen_code(routine);
+        routine = routine->next;
     }
 }

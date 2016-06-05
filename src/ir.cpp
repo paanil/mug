@@ -33,31 +33,32 @@ const char *IR::get_str(Type type)
 
 Quad *Routine::add(Quad quad)
 {
-    uint32_t m = n % Quads::N;
+    uint32_t n = quad_count % Quads::N;
 
-    if (m == 0)
+    if (n == 0)
     {
-        Quads *qs = a.allocate<Quads>();
-        qs->next = nullptr;
+        Quads *quads = a.allocate<Quads>();
+        quads->next = nullptr;
         if (head == nullptr)
-             head = qs;
-        else tail->next = qs;
-        tail = qs;
+             head = quads;
+        else tail->next = quads;
+        tail = quads;
     }
 
-    Quad *q = tail->quads + m;
-    *q = quad; n++;
+    Quad *q = tail->quads + n;
+    *q = quad;
+    quad_count++;
     return q;
 }
 
 Quad &Routine::operator [] (uint32_t index)
 {
-    assert(index < n);
-    Quads *qs = head;
-    uint32_t m = index / Quads::N;
-    while (m --> 0) // haha
-        qs = qs->next;
-    return qs->quads[index % Quads::N];
+    assert(index < quad_count);
+    Quads *quads = head;
+    uint32_t n = index / Quads::N;
+    while (n --> 0) // haha
+        quads = quads->next;
+    return quads->quads[index % Quads::N];
 }
 
 
@@ -381,64 +382,62 @@ struct IRGen
 //
 //
 
-void print_ir(Routine &r)
+void print_ir(Routine *routine)
 {
-    fprintf(stdout, "\n%s#%u:\n", r.name.data, r.id);
+    fprintf(stdout, "\n%s#%u:\n", routine->name.data, routine->id);
 
-    for(uint32_t i = 0; i < r.n; i++)
+    int quad_count = routine->quad_count;
+    for(int i = 0; i < quad_count; i++)
     {
-        Quad q = r[i];
+        Quad quad = (*routine)[i];
 
-        fprintf(stdout, "%u \t%s \t", i, IR::get_str(q.op));
+        fprintf(stdout, "%u \t%s \t", i, IR::get_str(quad.op));
 
-        switch (q.op)
+        switch (quad.op)
         {
         case IR::MOV_IM:
-            fprintf(stdout, "temp%u \t%llu \t-\n", q.target.temp_id, q.left.int_value);
+            fprintf(stdout, "temp%u \t%llu \t-\n", quad.target.temp_id, quad.left.int_value);
             break;
         case IR::MOV:
-            fprintf(stdout, "temp%u \ttemp%u \t-\n", q.target.temp_id, q.left.temp_id);
+            fprintf(stdout, "temp%u \ttemp%u \t-\n", quad.target.temp_id, quad.left.temp_id);
             break;
         case IR::NEG:
-            fprintf(stdout, "temp%u \ttemp%u \t-\n", q.target.temp_id, q.left.temp_id);
+            fprintf(stdout, "temp%u \ttemp%u \t-\n", quad.target.temp_id, quad.left.temp_id);
             break;
-        case IR::MUL:
-        case IR::IMUL:
-        case IR::DIV:
-        case IR::IDIV:
-        case IR::ADD:
-        case IR::SUB:
+        case IR::MUL: case IR::IMUL:
+        case IR::DIV: case IR::IDIV:
+        case IR::ADD: case IR::SUB:
         case IR::EQ: case IR::NE:
         case IR::LT: case IR::BELOW:
         case IR::GT: case IR::ABOVE:
         case IR::LE: case IR::BE:
         case IR::GE: case IR::AE:
-            fprintf(stdout, "temp%u \ttemp%u \ttemp%u\n", q.target.temp_id, q.left.temp_id, q.right.temp_id);
+            fprintf(stdout, "temp%u \ttemp%u \ttemp%u\n", quad.target.temp_id, quad.left.temp_id, quad.right.temp_id);
             break;
         case IR::XOR_IM:
-            fprintf(stdout, "temp%u \ttemp%u \t%llu\n", q.target.temp_id, q.left.temp_id, q.right.int_value);
+            fprintf(stdout, "temp%u \ttemp%u \t%llu\n", quad.target.temp_id, quad.left.temp_id, quad.right.int_value);
             break;
         case IR::JMP:
-            fprintf(stdout, "label%u \t- \t-\n", q.target.label);
+            fprintf(stdout, "label%u \t- \t-\n", quad.target.label);
             break;
         case IR::JZ:
         case IR::JNZ:
-            fprintf(stdout, "label%u \ttemp%u \t-\n", q.target.label, q.left.temp_id);
+            fprintf(stdout, "label%u \ttemp%u \t-\n", quad.target.label, quad.left.temp_id);
             break;
         case IR::LABEL:
-            fprintf(stdout, "label%u \t- \t-\n", q.target.label);
+            fprintf(stdout, "label%u \t- \t-\n", quad.target.label);
             break;
         case IR::CALL:
-            fprintf(stdout, "temp%u \tfunc%u \t-\n", q.target.temp_id, q.left.func_id);
+            fprintf(stdout, "temp%u \tfunc%u \t-\n", quad.target.temp_id, quad.left.func_id);
             break;
         case IR::RET:
-            if (q.target.returns_something)
-                fprintf(stdout, "temp%u \t- \t-\n", q.left.temp_id);
+            if (quad.target.returns_something)
+                fprintf(stdout, "temp%u \t- \t-\n", quad.left.temp_id);
             else
                 fprintf(stdout, "- \t- \t-\n");
             break;
         case IR::ARG:
-            fprintf(stdout, "arg%u \ttemp%u \t-\n", q.target.arg_index, q.left.temp_id);
+            fprintf(stdout, "arg%u \ttemp%u \t-\n", quad.target.arg_index, quad.left.temp_id);
             break;
         }
     }
@@ -446,11 +445,11 @@ void print_ir(Routine &r)
 
 void print_ir(IR ir)
 {
-    Routine *r = ir.routines;
-    while (r)
+    Routine *routine = ir.routines;
+    while (routine)
     {
-        print_ir(*r);
-        r = r->next;
+        print_ir(routine);
+        routine = routine->next;
     }
 }
 

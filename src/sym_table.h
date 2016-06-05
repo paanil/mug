@@ -2,7 +2,7 @@
 #define SYM_TABLE_H
 
 #include "str_map.h"
-#include "stack.h"
+#include "list.h"
 #include "type.h"
 
 template <class ValueT>
@@ -23,7 +23,7 @@ struct SymTable
     uint32_t scope_id;
     uint32_t next_scope_id;
     StrMap<Entry> table;
-    Stack<Stashed> stash;
+    List<Stashed> stash;
 
     SymTable()
     : scope_id()

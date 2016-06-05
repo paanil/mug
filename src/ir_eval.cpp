@@ -39,83 +39,84 @@ struct Evaluator
         lastval.is_void = false;
     }
 
-    Voidable eval(Routine &r)
+    Voidable eval(Routine *routine)
     {
-        for (uint32_t i = 0; i < r.n; i++)
+        int quad_count = routine->quad_count;
+        for (int i = 0; i < quad_count; i++)
         {
-            Quad q = r[i];
-            switch (q.op)
+            Quad quad = (*routine)[i];
+            switch (quad.op)
             {
                 case IR::MOV_IM:
-                    set(q.target, q.left.int_value);
+                    set(quad.target, quad.left.int_value);
                     break;
                 case IR::MOV:
-                    set(q.target, get(q.left).uvalue);
+                    set(quad.target, get(quad.left).uvalue);
                     break;
                 case IR::NEG:
-                    set(q.target, -get(q.left).ivalue);
+                    set(quad.target, -get(quad.left).ivalue);
                     break;
                 case IR::MUL:
-                    set(q.target, get(q.left).uvalue * get(q.right).uvalue);
+                    set(quad.target, get(quad.left).uvalue * get(quad.right).uvalue);
                     break;
                 case IR::IMUL:
-                    set(q.target, get(q.left).ivalue * get(q.right).ivalue);
+                    set(quad.target, get(quad.left).ivalue * get(quad.right).ivalue);
                     break;
                 case IR::DIV:
-                    set(q.target, get(q.left).uvalue / get(q.right).uvalue);
+                    set(quad.target, get(quad.left).uvalue / get(quad.right).uvalue);
                     break;
                 case IR::IDIV:
-                    set(q.target, get(q.left).ivalue / get(q.right).ivalue);
+                    set(quad.target, get(quad.left).ivalue / get(quad.right).ivalue);
                     break;
                 case IR::ADD:
-                    set(q.target, get(q.left).uvalue + get(q.right).uvalue);
+                    set(quad.target, get(quad.left).uvalue + get(quad.right).uvalue);
                     break;
                 case IR::SUB:
-                    set(q.target, get(q.left).uvalue - get(q.right).uvalue);
+                    set(quad.target, get(quad.left).uvalue - get(quad.right).uvalue);
                     break;
                 case IR::EQ:
-                    set(q.target, get(q.left).uvalue == get(q.right).uvalue);
+                    set(quad.target, get(quad.left).uvalue == get(quad.right).uvalue);
                     break;
                 case IR::NE:
-                    set(q.target, get(q.left).uvalue != get(q.right).uvalue);
+                    set(quad.target, get(quad.left).uvalue != get(quad.right).uvalue);
                     break;
                 case IR::LT:
-                    set(q.target, get(q.left).ivalue < get(q.right).ivalue);
+                    set(quad.target, get(quad.left).ivalue < get(quad.right).ivalue);
                     break;
                 case IR::BELOW:
-                    set(q.target, get(q.left).uvalue < get(q.right).uvalue);
+                    set(quad.target, get(quad.left).uvalue < get(quad.right).uvalue);
                     break;
                 case IR::GT:
-                    set(q.target, get(q.left).ivalue > get(q.right).ivalue);
+                    set(quad.target, get(quad.left).ivalue > get(quad.right).ivalue);
                     break;
                 case IR::ABOVE:
-                    set(q.target, get(q.left).uvalue > get(q.right).uvalue);
+                    set(quad.target, get(quad.left).uvalue > get(quad.right).uvalue);
                     break;
                 case IR::LE:
-                    set(q.target, get(q.left).ivalue <= get(q.right).ivalue);
+                    set(quad.target, get(quad.left).ivalue <= get(quad.right).ivalue);
                     break;
                 case IR::BE:
-                    set(q.target, get(q.left).uvalue <= get(q.right).uvalue);
+                    set(quad.target, get(quad.left).uvalue <= get(quad.right).uvalue);
                     break;
                 case IR::GE:
-                    set(q.target, get(q.left).ivalue >= get(q.right).ivalue);
+                    set(quad.target, get(quad.left).ivalue >= get(quad.right).ivalue);
                     break;
                 case IR::AE:
-                    set(q.target, get(q.left).uvalue >= get(q.right).uvalue);
+                    set(quad.target, get(quad.left).uvalue >= get(quad.right).uvalue);
                     break;
                 case IR::XOR_IM:
-                    set(q.target, get(q.left).uvalue ^ q.right.int_value);
+                    set(quad.target, get(quad.left).uvalue ^ quad.right.int_value);
                     break;
                 case IR::JMP:
-                    i = q.target.label;
+                    i = quad.target.label;
                     break;
                 case IR::JZ:
-                    if (get(q.left).uvalue == 0)
-                        i = q.target.label;
+                    if (get(quad.left).uvalue == 0)
+                        i = quad.target.label;
                     break;
                 case IR::JNZ:
-                    if (get(q.left).uvalue != 0)
-                        i = q.target.label;
+                    if (get(quad.left).uvalue != 0)
+                        i = quad.target.label;
                     break;
                 case IR::LABEL:
                     break;
@@ -123,18 +124,18 @@ struct Evaluator
                 {
                     assert(env_index < 20);
                     env_index++;
-                    Voidable rv = eval(*routines[q.left.func_id]);
+                    Voidable rv = eval(routines[quad.left.func_id]);
                     env_index--;
-                    set(q.target, rv.value.uvalue);
+                    set(quad.target, rv.value.uvalue);
                     lastval.is_void = rv.is_void;
                     break;
                 }
                 case IR::RET:
                 {
-                    if (q.target.returns_something)
+                    if (quad.target.returns_something)
                     {
                         Voidable rv = {};
-                        rv.value = get(q.left);
+                        rv.value = get(quad.left);
                         return rv;
                     }
                     break;
@@ -142,10 +143,10 @@ struct Evaluator
                 case IR::ARG:
                 {
                     assert(env_index < 20);
-                    Value arg = get(q.left);
+                    Value arg = get(quad.left);
                     env_index++;
                     Operand temp;
-                    temp.temp_id = q.target.arg_index;
+                    temp.temp_id = quad.target.arg_index;
                     set(temp, arg.uvalue);
                     env_index--;
                     break;
@@ -160,18 +161,18 @@ struct Evaluator
 
     void eval(IR ir)
     {
-        Routine *r = ir.routines;
-        while (r)
+        Routine *routine = ir.routines;
+        while (routine)
         {
-            assert(r->id < 20);
-            routines[r->id] = r;
-            r = r->next;
+            assert(routine->id < 20);
+            routines[routine->id] = routine;
+            routine = routine->next;
         }
 
         lastval.is_void = true;
 
         env_index = 0;
-        eval(*routines[0]);
+        eval(routines[0]);
     }
 };
 

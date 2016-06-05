@@ -31,11 +31,10 @@ struct Quads
 
 struct Routine
 {
-    uint32_t next_temp_id;
-
+    uint32_t temp_count;
     uint32_t param_count;
 
-    uint32_t n;
+    uint32_t quad_count;
     Quads *head;
     Quads *tail;
 
@@ -46,8 +45,9 @@ struct Routine
     Alloc &a;
 
     Routine(Str name_, uint32_t id_, Alloc &a_)
-    : next_temp_id()
-    , n()
+    : temp_count()
+    , param_count()
+    , quad_count()
     , head()
     , tail()
     , name(name_)
@@ -59,14 +59,14 @@ struct Routine
     Operand make_temp()
     {
         Operand result;
-        result.temp_id = next_temp_id++;
+        result.temp_id = temp_count++;
         return result;
     }
 
     Operand make_label()
     {
         Operand result;
-        result.label = n;
+        result.label = quad_count;
         add(IR::LABEL, result);
         return result;
     }
