@@ -33,6 +33,8 @@ i64 h(bool x);
 
 i64 spill_test();
 
+i64 many_params_test(i64 x, u64 y, bool z, i64 w, i64 a, u64 b, bool c);
+
 #define TEST(x, y) { i64 z = x; printf(#x " -> %lld \t\t%s\n", z, (z == y) ? "OK" : "ERROR"); }
 
 int main()
@@ -103,6 +105,12 @@ int main()
     TEST(h(false), 10);
 
     TEST(spill_test(), 54)
+
+    TEST(many_params_test(10, 20, true, 30, 40, 50, true), 10);
+    TEST(many_params_test(10, 20, false, 30, 40, 50, true), 30);
+    TEST(many_params_test(10, 200, false, 30, 40, 50, true), 40);
+    TEST(many_params_test(10, 200, false, 30, 40, 5, true), -22);
+    TEST(many_params_test(10, 200, true, 30, 40, 5, false), -22);
 
     return 0;
 }

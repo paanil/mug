@@ -293,9 +293,9 @@ struct CodeGen
         }
         else
         {
-//            temps[param_index].stack_offset = 8 * param_index;
-//            temps[param_index].spilled = true;
+            temps[param_index].spilled = true;
         }
+        temps[param_index].base_offset = 16 + 8 * param_index;
     }
 
     void spill(Register reg)
@@ -306,7 +306,8 @@ struct CodeGen
         Temp &temp = temps[reg.temp_id];
         if (!temp.spilled)
         {
-            temp.base_offset = -8 - 8 * spilled_count++;
+            if (temp.base_offset == 0)
+                temp.base_offset = -8 - 8 * spilled_count++;
             temp.spilled = true;
         }
         code.store(temp.base_offset, reg);
@@ -355,7 +356,7 @@ struct CodeGen
     {
         Temp temp = temps[temp_id];
         if (temp.reg_id != Reg_NONE)
-            return regs.get_register_by_id(temp.reg_id);
+            return regs.alloc_register(temp.reg_id, temp_id);
 
         Register reg = regs.alloc_any_register(temp_id);
         spill(reg);
@@ -441,9 +442,9 @@ struct CodeGen
             case IR::LE: case IR::BE:
             case IR::GE: case IR::AE:
             {
-                Register target = get_any_register_for(q.target.temp_id, false);
                 Register left = get_any_register_for(q.left.temp_id, true);
                 Register right = get_any_register_for(q.right.temp_id, true);
+                Register target = get_any_register_for(q.target.temp_id, false);
                 Register temp = get_any_register();
                 code.zero(target);
                 code.mov(temp, 1);

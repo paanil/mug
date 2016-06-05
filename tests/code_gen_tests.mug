@@ -43,3 +43,20 @@ function spill_test() -> int
 
     return a - b; // 54
 }
+
+function many_params_test(int x, uint y, bool z, int w, int a, uint b, bool c) -> int
+{
+    if (z && c)
+    {
+        return x;
+    }
+    if (y < 100u)
+    {
+        return w;
+    }
+    if (b > 5u)
+    {
+        return a;
+    }
+    return -22;
+}
