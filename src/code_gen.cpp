@@ -116,6 +116,15 @@ struct RegisterAlloc
         return true;
     }
 
+    void dealloc_register(RegID reg_id)
+    {
+        assert(reg_id != Reg_NONE);
+        assert(reg_id < Reg_COUNT);
+        assert(registers[reg_id].temp_id >= 0);
+
+        registers[reg_id].temp_id = -1;
+    }
+
     Register get_register_by_id(RegID reg_id)
     {
         assert(reg_id != Reg_NONE);
@@ -297,7 +306,6 @@ struct CodeGen
         Temp &temp = temps[reg.temp_id];
         if (!temp.spilled)
         {
-            assert(spilled_count < 16);
             temp.base_offset = -8 - 8 * spilled_count++;
             temp.spilled = true;
         }
@@ -312,10 +320,26 @@ struct CodeGen
         return reg;
     }
 
-    Register get_register_for_no_unspill(RegID reg_id, int32_t temp_id)
+    Register get_register_for(RegID reg_id, int32_t temp_id, bool load_spilled)
     {
         Register reg = regs.alloc_register(reg_id, temp_id);
         spill(reg);
+
+        if (load_spilled)
+        {
+            Temp temp = temps[temp_id];
+            if (temp.reg_id != Reg_NONE)
+            {
+                Register old = regs.get_register_by_id(temp.reg_id);
+                code.mov(reg, old);
+                regs.dealloc_register(old.id);
+            }
+            else if (temp.spilled)
+            {
+                code.load(reg, temp.base_offset);
+            }
+        }
+
         temps[temp_id].reg_id = reg.id;
         return reg;
     }
@@ -327,15 +351,15 @@ struct CodeGen
         return reg;
     }
 
-    Register get_any_register_for(int32_t temp_id)
+    Register get_any_register_for(int32_t temp_id, bool load_spilled)
     {
         Temp temp = temps[temp_id];
-        if (temp.reg_id >= 0)
+        if (temp.reg_id != Reg_NONE)
             return regs.get_register_by_id(temp.reg_id);
 
         Register reg = regs.alloc_any_register(temp_id);
         spill(reg);
-        if (temp.spilled)
+        if (temp.spilled && load_spilled)
             code.load(reg, temp.base_offset);
         temps[temp_id].reg_id = reg.id;
         return reg;
@@ -347,21 +371,21 @@ struct CodeGen
         {
             case IR::MOV_IM:
             {
-                Register reg = get_any_register_for/*_no_unspill*/(q.target.temp_id);
+                Register reg = get_any_register_for(q.target.temp_id, false);
                 code.mov(reg, q.left.int_value);
                 break;
             }
             case IR::MOV:
             {
-                Register target = get_any_register_for/*_no_unspill*/(q.target.temp_id);
-                Register left = get_any_register_for(q.left.temp_id);
+                Register target = get_any_register_for(q.target.temp_id, false);
+                Register left = get_any_register_for(q.left.temp_id, true);
                 code.mov(target, left);
                 break;
             }
             case IR::NEG:
             {
-                Register target = get_any_register_for/*_no_unspill*/(q.target.temp_id);
-                Register left = get_any_register_for(q.left.temp_id);
+                Register target = get_any_register_for(q.target.temp_id, false);
+                Register left = get_any_register_for(q.left.temp_id, true);
                 code.mov(target, left);
                 code.neg(target);
                 break;
@@ -369,10 +393,10 @@ struct CodeGen
             case IR::MUL: case IR::IMUL:
             case IR::DIV: case IR::IDIV:
             {
-                Register rax = get_register_for_no_unspill(Reg_rax, q.target.temp_id);
+                Register rax = get_register_for(Reg_rax, q.target.temp_id, false);
                 Register rdx = get_register(Reg_rdx);
-                Register left = get_any_register_for(q.left.temp_id);
-                Register right = get_any_register_for(q.right.temp_id);
+                Register left = get_any_register_for(q.left.temp_id, true);
+                Register right = get_any_register_for(q.right.temp_id, true);
                 code.mov(rax, left);
                 switch (q.op)
                 {
@@ -399,9 +423,9 @@ struct CodeGen
             case IR::ADD:
             case IR::SUB:
             {
-                Register target = get_any_register_for/*_no_unspill*/(q.target.temp_id);
-                Register left = get_any_register_for(q.left.temp_id);
-                Register right = get_any_register_for(q.right.temp_id);
+                Register target = get_any_register_for(q.target.temp_id, false);
+                Register left = get_any_register_for(q.left.temp_id, true);
+                Register right = get_any_register_for(q.right.temp_id, true);
                 code.mov(target, left);
                 switch (q.op)
                 {
@@ -417,9 +441,9 @@ struct CodeGen
             case IR::LE: case IR::BE:
             case IR::GE: case IR::AE:
             {
-                Register target = get_any_register_for/*_no_unspill*/(q.target.temp_id);
-                Register left = get_any_register_for(q.left.temp_id);
-                Register right = get_any_register_for(q.right.temp_id);
+                Register target = get_any_register_for(q.target.temp_id, false);
+                Register left = get_any_register_for(q.left.temp_id, true);
+                Register right = get_any_register_for(q.right.temp_id, true);
                 Register temp = get_any_register();
                 code.zero(target);
                 code.mov(temp, 1);
@@ -442,8 +466,8 @@ struct CodeGen
             }
             case IR::XOR_IM:
             {
-                Register target = get_any_register_for/*_no_unspill*/(q.target.temp_id);
-                Register left = get_any_register_for(q.left.temp_id);
+                Register target = get_any_register_for(q.target.temp_id, false);
+                Register left = get_any_register_for(q.left.temp_id, true);
                 code.mov(target, left);
                 code.xor_(target, q.right.int_value);
                 break;
@@ -456,7 +480,7 @@ struct CodeGen
             case IR::JZ:
             case IR::JNZ:
             {
-                Register left = get_any_register_for(q.left.temp_id);
+                Register left = get_any_register_for(q.left.temp_id, true);
                 code.cmp(left, 0);
                 switch (q.op)
                 {
@@ -476,7 +500,7 @@ struct CodeGen
                 if (q.target.returns_something)
                 {
                     Register rax = regs.get_register_by_id(Reg_rax);
-                    Register reg = get_any_register_for(q.left.temp_id);
+                    Register reg = get_any_register_for(q.left.temp_id, true);
                     if (rax.id != reg.id)
                         code.mov(rax, reg);
                 }
@@ -500,7 +524,7 @@ struct CodeGen
             temps[i].spilled = false;
         }
 
-        code.prolog(routine->name, 16*8);
+        code.prolog(routine->name, temp_count*8);
 
         int param_count = routine->param_count;
         for (int i = 0; i < param_count; i++)
