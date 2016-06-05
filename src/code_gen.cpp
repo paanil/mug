@@ -1,5 +1,6 @@
 #include "code_gen.h"
 #include "ir.h"
+#include "list.h"
 #include "assert.h"
 
 #define PASTE_REGS  \
@@ -41,9 +42,8 @@ struct RegisterAlloc
 
 #define PASTE_REG(r) registers[Reg_##r] = (Register){ Str::make(#r), Reg_##r, -1 };
 
-    RegisterAlloc()
+    void reset()
     {
-
         param_registers[0] = Reg_rcx;
         param_registers[1] = Reg_rdx;
         param_registers[2] = Reg_r8;
@@ -268,20 +268,12 @@ struct CodeGen
 
     int32_t spilled_count;
     RegisterAlloc regs;
-    Temp temps[100];
+    List<Temp> temps;
     Code &code;
 
     CodeGen(Code &code_)
-    : spilled_count()
-    , code(code_)
-    {
-        for (int i = 0; i < 100; i++)
-        {
-            temps[i].reg_id = Reg_NONE;
-            temps[i].base_offset = 0;
-            temps[i].spilled = false;
-        }
-    }
+    : code(code_)
+    {}
 
     void alloc_param(int param_index)
     {
@@ -496,6 +488,18 @@ struct CodeGen
 
     void gen_code(Routine *routine)
     {
+        spilled_count = 0;
+        regs.reset();
+        temps.resize(routine->temp_count);
+
+        int temp_count = temps.get_size();
+        for (int i = 0; i < temp_count; i++)
+        {
+            temps[i].reg_id = Reg_NONE;
+            temps[i].base_offset = 0;
+            temps[i].spilled = false;
+        }
+
         code.prolog(routine->name, 16*8);
 
         int param_count = routine->param_count;
@@ -536,10 +540,10 @@ void gen_code(IR ir, FILE *f)
 
     code.section_text();
 
+    CodeGen gen(code);
     routine = ir.routines->next;
     while (routine)
     {
-        CodeGen gen(code);
         gen.gen_code(routine);
         routine = routine->next;
     }

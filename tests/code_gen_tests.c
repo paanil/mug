@@ -31,6 +31,8 @@ bool or_(bool a, bool b);
 
 i64 h(bool x);
 
+i64 spill_test();
+
 #define TEST(x, y) { i64 z = x; printf(#x " -> %lld \t\t%s\n", z, (z == y) ? "OK" : "ERROR"); }
 
 int main()
@@ -99,6 +101,8 @@ int main()
 
     TEST(h(true), 5);
     TEST(h(false), 10);
+
+    TEST(spill_test(), 54)
 
     return 0;
 }

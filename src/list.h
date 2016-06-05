@@ -69,6 +69,11 @@ struct List
         size = new_size;
     }
 
+    uint32_t get_size()
+    {
+        return size;
+    }
+
     T &operator [] (uint32_t index)
     {
         assert(index < size);
