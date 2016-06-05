@@ -261,6 +261,7 @@ void run_parser_tests()
     TEST_FAIL("function h(3+5) {}")
     TEST_FAIL("function h(int 5) {}")
     TEST_FAIL("function h(int x, y) {}")
+    TEST_FAIL("function f() { function g() {} }")
 
     fprintf(stdout, "------------------------------\n");
     fprintf(stdout, "ran %d parser tests: %d succeeded, %d failed.\n\n\n", tests, tests - failed, failed);

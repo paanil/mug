@@ -69,6 +69,7 @@ struct Parser
     Node *parse_top_level();
 
     Node *parse_statement();
+    Node *parse_function_def();
     Node *parse_statements();
     bool parse_type(Type *result);
     bool parse_parameters(ParamList &params);
@@ -100,12 +101,32 @@ Ast Parser::parse(const char *input)
 
 Node *Parser::parse_top_level()
 {
-    Node *statements = parse_statements();
-    if (statements == nullptr)
+    StmtList stmts = {};
+    StmtList *prev = &stmts;
+
+    while (true)
+    {
+        Node *s = parse_statement();
+        if (s == nullptr)
+        {
+            if (error) break;
+
+            s = parse_function_def();
+            if (s == nullptr) break;
+        }
+
+        StmtList *stmt = a.alloc_stmt();
+        stmt->stmt = s;
+        stmt->next = nullptr;
+        prev->next = stmt;
+        prev = stmt;
+    }
+
+    if (error)
         return nullptr;
 
     if (accept(Token::END))
-        return statements;
+        return a.block_node(stmts.next);
 
     print_error("unexpected token '%s'", Token::get_str(token.type));
     return nullptr;
@@ -280,7 +301,11 @@ Node *Parser::parse_statement()
         return statements;
     }
 
-    // function definition
+    return nullptr;
+}
+
+Node *Parser::parse_function_def()
+{
     if (accept(Token::FUNCTION))
     {
         Str ident = token.text;

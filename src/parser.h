@@ -15,10 +15,11 @@ statement := return (expression | <none>) ';'
 statement := 'if' '(' expression ')' statement ('else' statement | <none>)
 statement := 'while' '(' expression ')' statement
 statement := '{' statements '}'
-statement := 'function' ident '(' parameters ')' ('->' | <none>) '{' statements '}'
-type := 'int' | 'uint' | 'bool'
 statements := statement statements | <none>
+type := 'int' | 'uint' | 'bool'
 parameters := type ident (',' parameters | <none>) | <none>
+function_def := 'function' ident '(' parameters ')' ('->' | <none>) '{' statements '}'
+top_level := (statement | function_def) top_level | <none>
 
 expression := and ('||' expression | <none>)
 and := comparison ('&&' and | <none>)
