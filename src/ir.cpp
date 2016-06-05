@@ -30,7 +30,7 @@ const char *IR::get_str(Type type)
 // Routine
 //
 
-Quad *Routine::add(Quad quad, Alloc &a)
+Quad *Routine::add(Alloc &a, Quad quad)
 {
     uint32_t m = n % Quads::N;
 
@@ -96,7 +96,7 @@ struct IRGen
                 Operand result = r.make_temp();
                 Operand operand;
                 operand.int_value = exp->boolean.value ? 1 : 0;
-                r.add(Quad(IR::MOV_IM, result, operand), a);
+                r.add(a, IR::MOV_IM, result, operand);
                 return result;
             }
 
@@ -105,7 +105,7 @@ struct IRGen
                 Operand result = r.make_temp();
                 Operand operand;
                 operand.int_value = exp->constant.value;
-                r.add(Quad(IR::MOV_IM, result, operand), a);
+                r.add(a, IR::MOV_IM, result, operand);
                 return result;
             }
 
@@ -124,14 +124,14 @@ struct IRGen
                     Operand arg_idx;
                     arg_idx.arg_index = index;
                     Operand value = gen_ir(r, arg->arg);
-                    r.add(Quad(IR::ARG, arg_idx, value), a);
+                    r.add(a, IR::ARG, arg_idx, value);
                     arg = arg->next;
                 }
 
                 Operand result = r.make_temp();
                 Operand routine;
                 routine = sym.get(exp->call.func_name);
-                r.add(Quad(IR::CALL, result, routine), a);
+                r.add(a, IR::CALL, result, routine);
                 return result;
             }
 
@@ -147,12 +147,12 @@ struct IRGen
                         // TODO: IR::NOT?
                         Operand one;
                         one.int_value = 1;
-                        r.add(Quad(IR::XOR_IM, result, operand, one), a);
+                        r.add(a, IR::XOR_IM, result, operand, one);
                         break;
                     }
                     case UnaryOp_NEG:
                     {
-                        r.add(Quad(IR::NEG, result, operand), a);
+                        r.add(a, IR::NEG, result, operand);
                         break;
                     }
                 }
@@ -173,68 +173,62 @@ struct IRGen
                 switch (exp->binary.op)
                 {
                     case BinaryOp_MUL:
-                        if (is_signed(exp))
-                            r.add(Quad(IR::IMUL, result, left, right), a);
-                        else
-                            r.add(Quad(IR::MUL, result, left, right), a);
+                        r.add(a,
+                              is_signed(exp) ? IR::IMUL : IR::MUL,
+                              result, left, right);
                         break;
                     case BinaryOp_DIV:
-                        if (is_signed(exp))
-                            r.add(Quad(IR::IDIV, result, left, right), a);
-                        else
-                            r.add(Quad(IR::DIV, result, left, right), a);
+                        r.add(a,
+                              is_signed(exp) ? IR::IDIV : IR::DIV,
+                              result, left, right);
                         break;
                     case BinaryOp_ADD:
-                        r.add(Quad(IR::ADD, result, left, right), a);
+                        r.add(a, IR::ADD, result, left, right);
                         break;
                     case BinaryOp_SUB:
-                        r.add(Quad(IR::SUB, result, left, right), a);
+                        r.add(a, IR::SUB, result, left, right);
                         break;
                     case BinaryOp_EQ:
-                        r.add(Quad(IR::EQ, result, left, right), a);
+                        r.add(a, IR::EQ, result, left, right);
                         break;
                     case BinaryOp_NE:
-                        r.add(Quad(IR::NE, result, left, right), a);
+                        r.add(a, IR::NE, result, left, right);
                         break;
                     case BinaryOp_LT:
-                        if (is_signed(exp->binary.left))
-                            r.add(Quad(IR::LT, result, left, right), a);
-                        else
-                            r.add(Quad(IR::BELOW, result, left, right), a);
+                        r.add(a,
+                              is_signed(exp->binary.left) ? IR::LT : IR::BELOW,
+                              result, left, right);
                         break;
                     case BinaryOp_GT:
-                        if (is_signed(exp->binary.left))
-                            r.add(Quad(IR::GT, result, left, right), a);
-                        else
-                            r.add(Quad(IR::ABOVE, result, left, right), a);
+                        r.add(a,
+                              is_signed(exp->binary.left) ? IR::GT : IR::ABOVE,
+                              result, left, right);
                         break;
                     case BinaryOp_LE:
-                        if (is_signed(exp->binary.left))
-                            r.add(Quad(IR::LE, result, left, right), a);
-                        else
-                            r.add(Quad(IR::BE, result, left, right), a);
+                        r.add(a,
+                              is_signed(exp->binary.left) ? IR::LE : IR::BE,
+                              result, left, right);
                         break;
                     case BinaryOp_GE:
-                        if (is_signed(exp->binary.left))
-                            r.add(Quad(IR::GE, result, left, right), a);
-                        else
-                            r.add(Quad(IR::AE, result, left, right), a);
+                        r.add(a,
+                              is_signed(exp->binary.left) ? IR::GE : IR::AE,
+                              result, left, right);
                         break;
                     case BinaryOp_AND:
                     {
-                        r.add(Quad(IR::MOV, result, left), a);
-                        Quad *jz_quad = r.add(Quad(IR::JZ, {}, result), a);
+                        r.add(a, IR::MOV, result, left);
+                        Quad *jz_quad = r.add(a, IR::JZ, {}, result);
                         right = gen_ir(r, exp->binary.right);
-                        r.add(Quad(IR::MOV, result, right), a);
+                        r.add(a, IR::MOV, result, right);
                         jz_quad->target = r.make_label(a);
                         break;
                     }
                     case BinaryOp_OR:
                     {
-                        r.add(Quad(IR::MOV, result, left), a);
-                        Quad *jnz_quad = r.add(Quad(IR::JNZ, {}, result), a);
+                        r.add(a, IR::MOV, result, left);
+                        Quad *jnz_quad = r.add(a, IR::JNZ, {}, result);
                         right = gen_ir(r, exp->binary.right);
-                        r.add(Quad(IR::MOV, result, right), a);
+                        r.add(a, IR::MOV, result, right);
                         jnz_quad->target = r.make_label(a);
                         break;
                     }
@@ -268,7 +262,7 @@ struct IRGen
                 // By doing that, we wouldn't get useless movs here, BUT
                 // think about expressions that use vars e.g. "(x + y) * z"!
                 // They would generate unnecessary movs.
-                r.add(Quad(IR::MOV, var, value), a);
+                r.add(a, IR::MOV, var, value);
                 break;
             }
 
@@ -299,18 +293,18 @@ struct IRGen
                     flag.returns_something = true;
                     value = gen_ir(r, node->ret.value);
                 }
-                r.add(Quad(IR::RET, flag, value), a);
+                r.add(a, IR::RET, flag, value);
                 break;
             }
 
             case NodeType_IF:
             {
                 Operand condition = gen_ir(r, node->if_stmt.condition);
-                Quad *jz_quad = r.add(Quad(IR::JZ, {}, condition), a);
+                Quad *jz_quad = r.add(a, IR::JZ, {}, condition);
                 gen_ir(r, node->if_stmt.true_stmt);
                 if (node->if_stmt.else_stmt)
                 {
-                    Quad *jmp_quad = r.add(Quad(IR::JMP), a);
+                    Quad *jmp_quad = r.add(a, IR::JMP);
                     jz_quad->target = r.make_label(a);
                     gen_ir(r, node->if_stmt.else_stmt);
                     jmp_quad->target = r.make_label(a);
@@ -326,9 +320,9 @@ struct IRGen
             {
                 Operand label = r.make_label(a);
                 Operand condition = gen_ir(r, node->while_stmt.condition);
-                Quad *jz_quad = r.add(Quad(IR::JZ, {}, condition), a);
+                Quad *jz_quad = r.add(a, IR::JZ, {}, condition);
                 gen_ir(r, node->while_stmt.stmt);
-                r.add(Quad(IR::JMP, label), a);
+                r.add(a, IR::JMP, label);
                 jz_quad->target = r.make_label(a);
                 break;
             }

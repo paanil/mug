@@ -20,31 +20,6 @@ struct Quad
     Operand target;
     Operand left;
     Operand right;
-
-    Quad()
-    {}
-
-    Quad(IR::Type op_)
-    : op(op_)
-    {}
-
-    Quad(IR::Type op_, Operand target_)
-    : op(op_)
-    , target(target_)
-    {}
-
-    Quad(IR::Type op_, Operand target_, Operand operand)
-    : op(op_)
-    , target(target_)
-    , left(operand)
-    {}
-
-    Quad(IR::Type op_, Operand target_, Operand left_, Operand right_)
-    : op(op_)
-    , target(target_)
-    , left(left_)
-    , right(right_)
-    {}
 };
 
 struct Quads
@@ -89,11 +64,20 @@ struct Routine
     {
         Operand result;
         result.label = n;
-        add(Quad(IR::LABEL, result), a);
+        add(a, IR::LABEL, result);
         return result;
     }
 
-    Quad *add(Quad quad, Alloc &a);
+    Quad *add(Alloc &a, Quad quad);
+
+    Quad *add(Alloc &a, IR::Type op)
+    { return add(a, (Quad){op, {}, {}, {}}); }
+    Quad *add(Alloc &a, IR::Type op, Operand target)
+    { return add(a, (Quad){op, target, {}, {}}); }
+    Quad *add(Alloc &a, IR::Type op, Operand target, Operand operand)
+    { return add(a, (Quad){op, target, operand, {}}); }
+    Quad *add(Alloc &a, IR::Type op, Operand target, Operand left, Operand right)
+    { return add(a, (Quad){op, target, left, right}); }
 
     Quad &operator [] (uint32_t index);
 };

@@ -1,6 +1,10 @@
-#include <cstdio>
-
-void run_tests();
+#include "tests.h"
+#include "code_gen.h"
+#include "ir_gen.h"
+#include "check.h"
+#include "parser.h"
+#include "alloc.h"
+#include "error_context.h"
 
 int compile(const char *, const char *);
 
@@ -81,6 +85,70 @@ int main(int argc, const char **argv)
         }
 
         return compile(s, print_only ? nullptr : o);
+    }
+
+    return 0;
+}
+
+//
+//
+//
+
+int compile(const char *source_file, const char *output_file)
+{
+    Alloc a;
+    char *buf;
+
+    {
+        FILE *f = fopen(source_file, "rb");
+        if (f == nullptr)
+        {
+            fprintf(stderr, "error: couldn't open file '%s'\n", source_file);
+            return 1;
+        }
+
+        fseek(f, 0, SEEK_END);
+        unsigned size = ftell(f);
+        fseek(f, 0, SEEK_SET);
+
+        buf = a.allocate_array<char>(size + 1);
+        buf[size] = 0;
+
+        if (fread(buf, 1, size, f) != size)
+        {
+            fprintf(stderr, "error: couldn't read file '%s'\n", source_file);
+            fclose(f);
+            return 1;
+        }
+
+        fclose(f);
+    }
+
+    ErrorContext ec;
+    Ast ast = parse(buf, a, ec);
+    if (!check(ast, ec))
+    {
+        return 0;
+    }
+
+    IR ir = gen_ir(ast, a);
+
+    if (output_file)
+    {
+        FILE *f = fopen(output_file, "w");
+        if (f == nullptr)
+        {
+            fprintf(stderr, "error: couldn't open file '%s' for writing\n", output_file);
+            return 1;
+        }
+
+        gen_code(ir, f);
+
+        fclose(f);
+    }
+    else
+    {
+        gen_code(ir, stdout);
     }
 
     return 0;

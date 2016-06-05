@@ -1,11 +1,6 @@
+#include "code_gen.h"
 #include "ir.h"
-#include "check.h"
-#include "parser.h"
-#include "alloc.h"
-#include "error_context.h"
 #include "assert.h"
-
-#include <cstdio>
 
 #define PASTE_REGS  \
     PASTE_REG(rax)  \
@@ -148,12 +143,13 @@ struct Code
         fprintf(f, "\t" "section .text\n");
     }
 
-    void prolog(Str func_name)
+    void prolog(Str func_name, uint32_t stack_bytes)
     {
 
         fprintf(f, "%s:\n", func_name.data);
         fprintf(f, "\t" "push rbp\n");
         fprintf(f, "\t" "mov rbp, rsp\n");
+        fprintf(f, "\t" "sub rsp, %u\n", stack_bytes);
         fprintf(f, "\n");
     }
 
@@ -163,6 +159,16 @@ struct Code
         fprintf(f, "\t" "mov rsp, rbp\n");
         fprintf(f, "\t" "pop rbp\n");
         fprintf(f, "\t" "ret\n\n");
+    }
+
+    void store(int32_t dest, Register source)
+    {
+        fprintf(f, "\t" "mov [rbp%+d], %s\n", dest, source.name.data);
+    }
+
+    void load(Register dest, int32_t source)
+    {
+        fprintf(f, "\t" "mov %s, [rbp%+d]\n", dest.name.data, source);
     }
 
     void mov(Register dest, uint64_t value)
@@ -256,20 +262,24 @@ struct CodeGen
     struct Temp
     {
         RegID reg_id; // Register that has the temp in it or none.
-//        int32_t stack_offset;
-//        bool spilled;
+        int32_t base_offset;
+        bool spilled;
     };
 
+    int32_t spilled_count;
     RegisterAlloc regs;
     Temp temps[100];
     Code &code;
 
     CodeGen(Code &code_)
-    : code(code_)
+    : spilled_count()
+    , code(code_)
     {
         for (int i = 0; i < 100; i++)
         {
             temps[i].reg_id = Reg_NONE;
+            temps[i].base_offset = 0;
+            temps[i].spilled = false;
         }
     }
 
@@ -287,32 +297,33 @@ struct CodeGen
         }
     }
 
-    void spill(int32_t temp_id)
+    void spill(Register reg)
     {
-        if (temp_id < 0)
+        if (reg.temp_id < 0)
             return;
 
-//        temps[temp_id].reg_id = Reg_NONE;
-        // TODO: spill
-
-        // TODO: Remove this hack!
-        Register src = regs.get_register_by_id(temps[temp_id].reg_id);
-        Register reg = regs.alloc_any_register(temp_id);
-        code.mov(reg, src); // spill
-        temps[temp_id].reg_id = reg.id;
+        Temp &temp = temps[reg.temp_id];
+        if (!temp.spilled)
+        {
+            assert(spilled_count < 16);
+            temp.base_offset = -8 - 8 * spilled_count++;
+            temp.spilled = true;
+        }
+        code.store(temp.base_offset, reg);
+        temp.reg_id = Reg_NONE;
     }
 
     Register get_register(RegID reg_id)
     {
         Register reg = regs.alloc_register(reg_id, -1);
-        spill(reg.temp_id);
+        spill(reg);
         return reg;
     }
 
     Register get_register_for_no_unspill(RegID reg_id, int32_t temp_id)
     {
         Register reg = regs.alloc_register(reg_id, temp_id);
-        spill(reg.temp_id);
+        spill(reg);
         temps[temp_id].reg_id = reg.id;
         return reg;
     }
@@ -320,7 +331,7 @@ struct CodeGen
     Register get_any_register()
     {
         Register reg = regs.alloc_any_register(-1);
-        spill(reg.temp_id);
+        spill(reg);
         return reg;
     }
 
@@ -331,11 +342,9 @@ struct CodeGen
             return regs.get_register_by_id(temp.reg_id);
 
         Register reg = regs.alloc_any_register(temp_id);
-        spill(reg.temp_id);
-//        if (temp.spilled)
-//        {
-//            // load
-//        }
+        spill(reg);
+        if (temp.spilled)
+            code.load(reg, temp.base_offset);
         temps[temp_id].reg_id = reg.id;
         return reg;
     }
@@ -346,20 +355,20 @@ struct CodeGen
         {
             case IR::MOV_IM:
             {
-                Register reg = get_any_register_for(q.target.temp_id);
+                Register reg = get_any_register_for/*_no_unspill*/(q.target.temp_id);
                 code.mov(reg, q.left.int_value);
                 break;
             }
             case IR::MOV:
             {
-                Register target = get_any_register_for(q.target.temp_id);
+                Register target = get_any_register_for/*_no_unspill*/(q.target.temp_id);
                 Register left = get_any_register_for(q.left.temp_id);
                 code.mov(target, left);
                 break;
             }
             case IR::NEG:
             {
-                Register target = get_any_register_for(q.target.temp_id);
+                Register target = get_any_register_for/*_no_unspill*/(q.target.temp_id);
                 Register left = get_any_register_for(q.left.temp_id);
                 code.mov(target, left);
                 code.neg(target);
@@ -398,7 +407,7 @@ struct CodeGen
             case IR::ADD:
             case IR::SUB:
             {
-                Register target = get_any_register_for(q.target.temp_id);
+                Register target = get_any_register_for/*_no_unspill*/(q.target.temp_id);
                 Register left = get_any_register_for(q.left.temp_id);
                 Register right = get_any_register_for(q.right.temp_id);
                 code.mov(target, left);
@@ -416,7 +425,7 @@ struct CodeGen
             case IR::LE: case IR::BE:
             case IR::GE: case IR::AE:
             {
-                Register target = get_any_register_for(q.target.temp_id);
+                Register target = get_any_register_for/*_no_unspill*/(q.target.temp_id);
                 Register left = get_any_register_for(q.left.temp_id);
                 Register right = get_any_register_for(q.right.temp_id);
                 Register temp = get_any_register();
@@ -441,7 +450,7 @@ struct CodeGen
             }
             case IR::XOR_IM:
             {
-                Register target = get_any_register_for(q.target.temp_id);
+                Register target = get_any_register_for/*_no_unspill*/(q.target.temp_id);
                 Register left = get_any_register_for(q.left.temp_id);
                 code.mov(target, left);
                 code.xor_(target, q.right.int_value);
@@ -487,7 +496,7 @@ struct CodeGen
 
     void gen_code(Routine &r)
     {
-        code.prolog(r.name);
+        code.prolog(r.name, 16*8);
 
         int param_count = r.param_count;
         for (int i = 0; i < param_count; i++)
@@ -533,64 +542,4 @@ void gen_code(IR ir, FILE *f)
         gen.gen_code(*r);
         r = r->next;
     }
-}
-
-int compile(const char *source_file, const char *output_file)
-{
-    Alloc a;
-    char *buf;
-
-    {
-        FILE *f = fopen(source_file, "rb");
-        if (f == nullptr)
-        {
-            fprintf(stderr, "error: couldn't open file '%s'\n", source_file);
-            return 1;
-        }
-
-        fseek(f, 0, SEEK_END);
-        unsigned size = ftell(f);
-        fseek(f, 0, SEEK_SET);
-
-        buf = a.allocate_array<char>(size + 1);
-        buf[size] = 0;
-
-        if (fread(buf, 1, size, f) != size)
-        {
-            fprintf(stderr, "error: couldn't read file '%s'\n", source_file);
-            fclose(f);
-            return 1;
-        }
-
-        fclose(f);
-    }
-
-    ErrorContext ec;
-    Ast ast = parse(buf, a, ec);
-    if (!check(ast, ec))
-    {
-        return 0;
-    }
-
-    IR ir = gen_ir(ast, a);
-
-    if (output_file)
-    {
-        FILE *f = fopen(output_file, "w");
-        if (f == nullptr)
-        {
-            fprintf(stderr, "error: couldn't open file '%s' for writing\n", output_file);
-            return 1;
-        }
-
-        gen_code(ir, f);
-
-        fclose(f);
-    }
-    else
-    {
-        gen_code(ir, stdout);
-    }
-
-    return 0;
 }
