@@ -1,5 +1,6 @@
 #include "ir_eval.h"
 #include "ir.h"
+#include "list.h"
 #include "assert.h"
 
 union Value
@@ -17,9 +18,9 @@ struct Voidable
 struct Evaluator
 {
     int env_index;
-    // TODO: Better environment and routine table.
+    // TODO: Better environment.
     Value env[20][100]; // max 20 nested calls, max 100 temps per call
-    Routine *routines[20]; // max 20 routines
+    List<Routine*> routines;
 
     Voidable lastval; // for tests... which is not very intuitive :S
 
@@ -41,6 +42,9 @@ struct Evaluator
 
     Voidable eval(Routine *routine)
     {
+        Voidable rv;
+        rv.is_void = true;
+
         int quad_count = routine->quad_count;
         for (int i = 0; i < quad_count; i++)
         {
@@ -134,10 +138,10 @@ struct Evaluator
                 {
                     if (quad.target.returns_something)
                     {
-                        Voidable rv = {};
                         rv.value = get(quad.left);
-                        return rv;
+                        rv.is_void = false;
                     }
+                    i = quad_count; // break the loop
                     break;
                 }
                 case IR::ARG:
@@ -154,8 +158,6 @@ struct Evaluator
             }
         }
 
-        Voidable rv;
-        rv.is_void = true;
         return rv;
     }
 
@@ -164,7 +166,8 @@ struct Evaluator
         Routine *routine = ir.routines;
         while (routine)
         {
-            assert(routine->id < 20);
+            if (routines.get_size() < routine->id + 1)
+                routines.resize(routine->id + 1);
             routines[routine->id] = routine;
             routine = routine->next;
         }
