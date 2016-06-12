@@ -1,17 +1,21 @@
 #ifndef CODE_H
 #define CODE_H
 
+#include "list.h"
+
 struct Code
 {
     FILE *f;
+    List<Str> routines;
 
     Code(FILE *out)
     : f(out)
     {}
 
-    void global(Str name)
+    void global_routine(Str name)
     {
         fprintf(f, "\t" "global %s\n", name.data);
+        routines.push(name);
     }
 
     void section_text()
@@ -100,6 +104,11 @@ struct Code
     void jne(uint32_t label)
     {
         fprintf(f, "\t" "jne .l%u\n", label);
+    }
+
+    void call(uint32_t routine_id)
+    {
+        fprintf(f, "\t" "call %s\n", routines[routine_id].data);
     }
 
 #define INSTRUCTION(instr_name) \

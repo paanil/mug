@@ -2,7 +2,6 @@
 #include "ir.h"
 #include "register_alloc.h"
 #include "code.h"
-#include "list.h"
 
 struct CodeGen
 {
@@ -246,6 +245,12 @@ struct CodeGen
                 code.jmp_epi();
                 break;
             }
+            case IR::CALL:
+            {
+                code.call(q.left.func_id);
+                get_register_for(Reg_rax, q.target.temp_id, false);
+                break;
+            }
         }
     }
 
@@ -294,10 +299,13 @@ void gen_code(IR ir, FILE *f)
 
     Code code(f);
 
+    // TODO: How to handle top level?
+    code.global_routine(Str::make("@top_level"));
+
     Routine *routine = ir.routines->next;
     while (routine)
     {
-        code.global(routine->name);
+        code.global_routine(routine->name);
         routine = routine->next;
     }
 
