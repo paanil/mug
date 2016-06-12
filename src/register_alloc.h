@@ -95,24 +95,13 @@ struct RegisterAlloc
         return reg;
     }
 
-    bool alloc_param_register(int param_index, Register *reg)
+    bool get_param_register(int param_index, Register *reg)
     {
         if(param_index >= PARAM_REG_COUNT)
             return false;
 
         RegID reg_id = param_registers[param_index];
-
-        for (int i = 0; i < Reg_COUNT; i++)
-        {
-            if (register_queue[i] == reg_id)
-            {
-                move_back_in_queue(i);
-                break;
-            }
-        }
-
         *reg = registers[reg_id];
-        registers[reg_id].temp_id = param_index;
         return true;
     }
 

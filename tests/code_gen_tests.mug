@@ -61,7 +61,6 @@ function many_params_test(int x, uint y, bool z, int w, int a, uint b, bool c) -
     return -22;
 }
 
-function call_test() -> int
-{
-    return f();
-}
+function call_test() -> int { return f(); }
+function call_test2() -> int { return f2(42, 30); }
+function call_test3() -> int { return f() + f2(10, 20); }

@@ -111,6 +111,11 @@ struct Code
         fprintf(f, "\t" "call %s\n", routines[routine_id].data);
     }
 
+    void push(Register reg)
+    {
+        fprintf(f, "\t" "push %s\n", reg.name.data);
+    }
+
 #define INSTRUCTION(instr_name) \
     void instr_name(Register r) { \
         fprintf(f, "\t" #instr_name " %s\n", r.name.data); \

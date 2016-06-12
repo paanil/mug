@@ -15,29 +15,16 @@ struct CodeGen
     int32_t spilled_count;
     RegisterAlloc regs;
     List<Temp> temps;
+    List<int32_t> args;
     Code &code;
 
     CodeGen(Code &code_)
     : code(code_)
     {}
 
-    void alloc_param(int param_index)
-    {
-        Register reg;
-        if (regs.alloc_param_register(param_index, &reg))
-        {
-            temps[param_index].reg_id = reg.id;
-        }
-        else
-        {
-            temps[param_index].spilled = true;
-        }
-        temps[param_index].base_offset = 16 + 8 * param_index;
-    }
-
     void spill(Register reg)
     {
-        if (reg.temp_id < 0)
+        if (reg.temp_id == Reg_NONE)
             return;
 
         Temp &temp = temps[reg.temp_id];
@@ -245,8 +232,32 @@ struct CodeGen
                 code.jmp_epi();
                 break;
             }
+            case IR::ARG:
+            {
+                uint32_t arg_index = q.target.arg_index;
+                if (args.get_size() < arg_index + 1)
+                    args.resize(arg_index + 1);
+                args[arg_index] = q.left.temp_id;
+                break;
+            }
             case IR::CALL:
             {
+                while (args.get_size())
+                {
+                    int32_t temp_id = args.pop();
+
+                    Register reg;
+                    if (regs.get_param_register(args.get_size(), &reg))
+                    {
+                        get_register_for(reg.id, temp_id, true);
+                    }
+                    else
+                    {
+                        reg = get_any_register_for(temp_id, true);
+                        code.push(reg);
+                    }
+                }
+
                 code.call(q.left.func_id);
                 get_register_for(Reg_rax, q.target.temp_id, false);
                 break;
@@ -259,6 +270,7 @@ struct CodeGen
         spilled_count = 0;
         regs.reset();
         temps.resize(routine->temp_count);
+        args.resize(0);
 
         int temp_count = temps.get_size();
         for (int i = 0; i < temp_count; i++)
@@ -268,12 +280,23 @@ struct CodeGen
             temps[i].spilled = false;
         }
 
-        code.prolog(routine->name, temp_count*8);
-
         int param_count = routine->param_count;
+        // TODO: Use spilled_count in prolog.
+        code.prolog(routine->name, (((uint32_t)(temp_count - param_count) + 1u) & ~1u)*8u);
+
         for (int i = 0; i < param_count; i++)
         {
-            alloc_param(i);
+            Register reg;
+            if (regs.get_param_register(i, &reg))
+            {
+                regs.alloc_register(reg.id, i);
+                temps[i].reg_id = reg.id;
+            }
+            else
+            {
+                temps[i].spilled = true;
+            }
+            temps[i].base_offset = 16 + 8 * i;
         }
 
         int quad_count = routine->quad_count;
