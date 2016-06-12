@@ -63,4 +63,25 @@ function many_params_test(int x, uint y, bool z, int w, int a, uint b, bool c) -
 
 function call_test() -> int { return f(); }
 function call_test2() -> int { return f2(42, 30); }
-function call_test3() -> int { return f() + f2(10, 20); }
+function call_test3() -> int { return 42 + f2(10, 20); }
+function call_test4() -> int { return f() + f2(10, 20); }
+
+function basic_block_test(bool b) -> int
+{
+    int x;
+    int y;
+    if (b)
+    {
+        y = 10 * 5; // 50
+        x = y * 2 + 20; // 120
+    }
+    else
+    {
+        y = 10 * 6; // 60
+        x = y + 30; // 90
+    }
+
+    x = y + x; // true:170 false:150
+
+    return x;
+}

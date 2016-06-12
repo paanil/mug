@@ -22,7 +22,7 @@ struct CodeGen
     : code(code_)
     {}
 
-    void spill(Register reg)
+    void spill(Register reg, bool no_reset_to_none = false)
     {
         if (reg.temp_id == Reg_NONE)
             return;
@@ -35,7 +35,8 @@ struct CodeGen
             temp.spilled = true;
         }
         code.store(temp.base_offset, reg);
-        temp.reg_id = Reg_NONE;
+        if (!no_reset_to_none)
+            temp.reg_id = Reg_NONE;
     }
 
     Register get_register(RegID reg_id)
@@ -48,24 +49,33 @@ struct CodeGen
     Register get_register_for(RegID reg_id, int32_t temp_id, bool load_spilled)
     {
         Register reg = regs.alloc_register(reg_id, temp_id);
-        spill(reg);
 
-        if (load_spilled)
+        if (reg.temp_id != temp_id)
         {
-            Temp temp = temps[temp_id];
-            if (temp.reg_id != Reg_NONE)
+            spill(reg);
+
+            if (load_spilled)
             {
-                Register old = regs.get_register_by_id(temp.reg_id);
-                code.mov(reg, old);
-                regs.dealloc_register(old.id);
+                Temp temp = temps[temp_id];
+                if (temp.reg_id != Reg_NONE)
+                {
+                    Register old = regs.get_register_by_id(temp.reg_id);
+                    code.mov(reg, old);
+                    regs.dealloc_register(old.id);
+                }
+                else if (temp.spilled)
+                {
+                    code.load(reg, temp.base_offset);
+                }
             }
-            else if (temp.spilled)
-            {
-                code.load(reg, temp.base_offset);
-            }
+
+            temps[temp_id].reg_id = reg.id;
+        }
+        else
+        {
+            assert(temps[temp_id].reg_id == reg.id);
         }
 
-        temps[temp_id].reg_id = reg.id;
         return reg;
     }
 
@@ -134,11 +144,9 @@ struct CodeGen
                 switch (q.op)
                 {
                     case IR::MUL:
-                        code.zero(rdx);
                         code.mul(right);
                         break;
                     case IR::IMUL:
-                        code.sign_extend_rax_to_rdx();
                         code.imul(right);
                         break;
                     case IR::DIV:
@@ -199,7 +207,9 @@ struct CodeGen
             }
             case IR::JMP:
             {
+                end_basic_block();
                 code.jmp(q.target.label);
+                begin_basic_block();
                 break;
             }
             case IR::JZ:
@@ -207,17 +217,21 @@ struct CodeGen
             {
                 Register left = get_any_register_for(q.left.temp_id, true);
                 code.cmp(left, 0);
+                end_basic_block();
                 switch (q.op)
                 {
                     case IR::JZ:  code.je(q.target.label);  break;
                     case IR::JNZ: code.jne(q.target.label); break;
                     InvalidDefaultCase;
                 }
+                begin_basic_block();
                 break;
             }
             case IR::LABEL:
             {
+                end_basic_block();
                 code.label(q.target.label);
+                begin_basic_block();
                 break;
             }
             case IR::RET:
@@ -242,6 +256,8 @@ struct CodeGen
             }
             case IR::CALL:
             {
+                end_basic_block();
+
                 while (args.get_size())
                 {
                     int32_t temp_id = args.pop();
@@ -254,14 +270,32 @@ struct CodeGen
                     else
                     {
                         reg = get_any_register_for(temp_id, true);
-                        code.push(reg);
                     }
+                    code.push(reg);
                 }
 
                 code.call(q.left.func_id);
+                begin_basic_block();
                 get_register_for(Reg_rax, q.target.temp_id, false);
                 break;
             }
+        }
+    }
+
+    void begin_basic_block()
+    {
+        regs.reset();
+        int temp_count = temps.get_size();
+        for (int i = 0; i < temp_count; i++)
+            temps[i].reg_id = Reg_NONE;
+    }
+
+    void end_basic_block()
+    {
+        for (int i = Reg_NONE + 1; i < Reg_COUNT; i++)
+        {
+            Register reg = regs.get_register_by_id((RegID)i);
+            spill(reg, true);
         }
     }
 
@@ -270,7 +304,6 @@ struct CodeGen
         spilled_count = 0;
         regs.reset();
         temps.resize(routine->temp_count);
-        args.resize(0);
 
         int temp_count = temps.get_size();
         for (int i = 0; i < temp_count; i++)

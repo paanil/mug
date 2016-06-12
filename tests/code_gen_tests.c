@@ -38,6 +38,9 @@ i64 many_params_test(i64 x, u64 y, bool z, i64 w, i64 a, u64 b, bool c);
 i64 call_test();
 i64 call_test2();
 i64 call_test3();
+i64 call_test4();
+
+i64 basic_block_test(bool b);
 
 #define TEST(x, y) { i64 z = x; printf(#x " -> %lld \t\t%s\n", z, (z == y) ? "OK" : "ERROR"); }
 
@@ -119,6 +122,12 @@ int main()
     TEST(call_test(), 42);
     TEST(call_test2(), 72);
     TEST(call_test3(), 72);
+    TEST(call_test4(), 72);
+
+    TEST(basic_block_test(true), 170);
+    TEST(basic_block_test(false), 150);
+
+    // TODO: call tests with params on stack
 
     return 0;
 }
