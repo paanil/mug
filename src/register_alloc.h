@@ -27,9 +27,22 @@ enum RegID
 
 struct Register
 {
-    Str name; // We might want to put registers in a StrMap (?) => not just c-string.
     RegID id; // Actually just an index.
     int32_t temp_id; // Temp currently in the register or -1 if none.
+
+#define PASTE_REG(r) #r,
+
+    static const char *get_str(RegID reg_id)
+    {
+        static const char *reg_str[] =
+        {
+            PASTE_REGS
+        };
+
+        return reg_str[reg_id];
+    }
+
+#undef PASTE_REG
 };
 
 #define PARAM_REG_COUNT 4
@@ -40,7 +53,7 @@ struct RegisterAlloc
     RegID register_queue[Reg_COUNT]; // Used for least recently used allocation.
     Register registers[Reg_COUNT];
 
-#define PASTE_REG(r) registers[Reg_##r] = (Register){ Str::make(#r), Reg_##r, -1 };
+#define PASTE_REG(r) registers[Reg_##r] = (Register){ Reg_##r, -1 };
 
     void reset()
     {

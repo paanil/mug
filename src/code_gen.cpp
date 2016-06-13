@@ -12,7 +12,8 @@ struct CodeGen
         bool spilled;
     };
 
-    int32_t spilled_count;
+    uint32_t spilled_count;
+    uint32_t max_arg_count;
     RegisterAlloc regs;
     List<Temp> temps;
     List<int32_t> args;
@@ -258,12 +259,17 @@ struct CodeGen
             {
                 end_basic_block();
 
-                while (args.get_size())
+
+                int arg_count = args.get_size();
+                if (arg_count > (int)max_arg_count)
+                    max_arg_count = arg_count;
+
+                for (int i = arg_count - 1; i >= 0; i--)
                 {
-                    int32_t temp_id = args.pop();
+                    int32_t temp_id = args[i];
 
                     Register reg;
-                    if (regs.get_param_register(args.get_size(), &reg))
+                    if (regs.get_param_register(i, &reg))
                     {
                         get_register_for(reg.id, temp_id, true);
                     }
@@ -271,8 +277,9 @@ struct CodeGen
                     {
                         reg = get_any_register_for(temp_id, true);
                     }
-                    code.push(reg);
+                    code.push_arg(i*8, reg);
                 }
+                args.resize(0);
 
                 code.call(q.left.func_id);
                 begin_basic_block();
@@ -302,6 +309,7 @@ struct CodeGen
     void gen_code(Routine *routine)
     {
         spilled_count = 0;
+        max_arg_count = 0;
         regs.reset();
         temps.resize(routine->temp_count);
 
@@ -314,9 +322,6 @@ struct CodeGen
         }
 
         int param_count = routine->param_count;
-        // TODO: Use spilled_count in prolog.
-        code.prolog(routine->name, (((uint32_t)(temp_count - param_count) + 1u) & ~1u)*8u);
-
         for (int i = 0; i < param_count; i++)
         {
             Register reg;
@@ -338,7 +343,8 @@ struct CodeGen
             gen_code((*routine)[i]);
         }
 
-        code.epilog();
+        int stack_slots = (spilled_count + max_arg_count + 1u) & ~1u;
+        code.write_routine(routine->name, stack_slots * 8u);
     }
 };
 
@@ -350,22 +356,23 @@ void gen_code(IR ir, FILE *f)
         return;
     }
 
-    print_ir(ir);
-    fprintf(stdout, "\n\n");
+//    print_ir(ir);
+//    fprintf(stdout, "\n\n");
 
     Code code(f);
 
     // TODO: How to handle top level?
-    code.global_routine(Str::make("@top_level"));
+    code.routine(Str::make("top.level"));
 
     Routine *routine = ir.routines->next;
     while (routine)
     {
-        code.global_routine(routine->name);
+        code.routine(routine->name);
+        fprintf(f, "\t" "global %s\n", routine->name.data);
         routine = routine->next;
     }
 
-    code.section_text();
+    fprintf(f, "\t" "section .text\n");
 
     CodeGen gen(code);
     routine = ir.routines->next;
