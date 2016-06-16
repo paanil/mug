@@ -9,6 +9,9 @@
 #define MAX_PROBE 8
 #define NOT_FOUND (~0u)
 
+/**
+ * Simple string hash table.
+ */
 template <class ValueT>
 struct StrMap
 {

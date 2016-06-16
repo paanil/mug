@@ -1,10 +1,10 @@
 @echo off
 mkdir build
 echo Compiling mug test build...
-g++ -std=c++11 -DTEST_BUILD -o build\mug.exe src\*.cpp
+g++ -std=c++11 -DTEST_BUILD -o build\mug_test.exe src\*.cpp
 
 echo Running unit tests...
-build\mug.exe
+build\mug_test.exe
 
 echo Compiling mug...
 g++ -std=c++11 -o build\mug.exe src\*.cpp
@@ -12,8 +12,8 @@ g++ -std=c++11 -o build\mug.exe src\*.cpp
 echo Compiling code_gen_tests...
 build\mug.exe -c -o build\code_gen_tests.o tests\code_gen_tests.mug
 
-echo Linking...
-gcc tests\code_gen_tests.c build\code_gen_tests.o -o build\code_gen_tests.exe
+echo Linking code_gen_tests...
+gcc -o build\code_gen_tests.exe tests\code_gen_tests.c build\code_gen_tests.o
 
 echo Running code_gen_tests...
 build\code_gen_tests.exe

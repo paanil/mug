@@ -22,6 +22,10 @@ struct Quad
     Operand right;
 };
 
+/**
+ * Routine containes linked list of quad blocks.
+ * One block contains 64 quads.
+ */
 struct Quads
 {
     static const uint32_t N = 64;
@@ -29,6 +33,20 @@ struct Quads
     Quads *next;
 };
 
+/**
+ * Routines form a linked list. The IR struct has
+ * a pointer to the first routine (which is the top
+ * level routine).
+ *
+ * All routines have id that can be used as an
+ * index to a routine table.
+ * E.g. if there are 8 routines total, they will have
+ * ids from 0 to 7. Top level routine's id is 0.
+ *
+ * All temps inside a routine have similarly ids that
+ * can be used as indices. Params and vars are temps.
+ * Params have the first ids (from 0 to param_count - 1).
+ */
 struct Routine
 {
     uint32_t temp_count;

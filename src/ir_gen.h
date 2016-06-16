@@ -30,6 +30,9 @@
     PASTE_TYPE(RET)     \
     PASTE_TYPE(ARG)
 
+/**
+ * IR has a linked list of routines.
+ */
 struct IR
 {
 #define PASTE_TYPE(x) x,
@@ -43,11 +46,14 @@ struct IR
 
     static const char *get_str(Type type);
 
-    struct Routine *routines;
+    struct Routine *routines; // linked list of routines. first one is the top level
 };
 
 void print_ir(IR ir);
 
+/**
+ * Generates intermediate code from the given AST.
+ */
 IR gen_ir(struct Ast &ast, struct Alloc &a);
 
 #endif // IR_GEN_H

@@ -66,6 +66,20 @@ function call_test2() -> int { return f2(42, 30); }
 function call_test3() -> int { return 42 + f2(10, 20); }
 function call_test4() -> int { return f() + f2(10, 20); }
 
+function call_test5() -> int {
+    return many_params_test(10, 20, true, 30, 40, 50, true);
+}
+function call_test6() -> int {
+    return many_params_test(10, 20, false, 30, 40, 50, true);
+}
+function call_test7() -> int {
+    return many_params_test(10, 200, false, 30, 40, 50, true);
+}function call_test8() -> int {
+    return many_params_test(10, 200, false, 30, 40, 5, true);
+}
+function call_test9() -> int {    return many_params_test(10, 200, true, 30, 40, 5, false);
+}
+
 function basic_block_test(bool b) -> int
 {
     int x;

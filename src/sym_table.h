@@ -5,6 +5,9 @@
 #include "list.h"
 #include "type.h"
 
+/**
+ * Value type templated symbol table.
+ */
 template <class ValueT>
 struct SymTable
 {
@@ -93,7 +96,7 @@ struct SymTable
         {
             Stashed item = stash.pop();
 
-            const char * scope_marker = "@scope_marker";
+            const char *scope_marker = "@scope_marker";
             if (item.symbol.data == scope_marker)
             {
                 scope_id = item.entry.scope;

@@ -62,14 +62,13 @@ Quad &Routine::operator [] (uint32_t index)
 }
 
 
-//
-//
-//
-
+/**
+ * Generates intermediate code from AST.
+ */
 struct IRGen
 {
     uint32_t next_routine_id;
-    Routine *tail;
+    Routine *tail; // The current tail of the linked list of routines.
     SymTable<Operand> sym;
     Alloc &a;
 
@@ -82,6 +81,7 @@ struct IRGen
     Routine *make_routine(Str name)
     {
         Routine *routine = a.allocate<Routine>();
+        // TODO: Get rid of this placement new.
         routine = new (routine) Routine(name, next_routine_id++, a);
         if (tail != nullptr)
             tail->next = routine;
@@ -89,6 +89,10 @@ struct IRGen
         return routine;
     }
 
+    /**
+     * Returns the value of the expression as a temp.
+     * Even vars are temps.
+     */
     Operand gen_ir(Routine &r, Expression *exp)
     {
         switch (exp->type)
@@ -267,7 +271,7 @@ struct IRGen
                     // TODO: Is this even necessary?
                     // We could sym.put(var_name, temp) when we first assign a value, BUT
                     // what if var is used without initializing or assigning?
-                    Operand var = r.make_temp();
+                    Operand var = r.make_temp(); // variable is a temp
                     sym.put(node->decl.var_name, var);
                 }
                 break;
@@ -344,7 +348,7 @@ struct IRGen
 
                 for (ParamList *p = node->func_def.params; p; p = p->next)
                 {
-                    Operand param = routine->make_temp();
+                    Operand param = routine->make_temp(); // params are temps
                     sym.put(p->name, param);
                     param_count++;
                 }

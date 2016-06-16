@@ -32,6 +32,9 @@ arguments := expression (',' arguments | <none>) | <none>
 
 */
 
+/**
+ * Parses the input according to the grammar and returns valid or invalid AST.
+ */
 Ast parse(const char *input, struct Alloc &a, struct ErrorContext &ec);
 
 #endif // PARSER_H

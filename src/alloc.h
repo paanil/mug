@@ -1,6 +1,16 @@
 #ifndef ALLOC_H
 #define ALLOC_H
 
+#define BLOCK_SIZE 64*1024
+
+/**
+ * With Alloc the user can allocate memory without worrying about
+ * freeing it. All the allocated memory is freed by calling free_all()
+ * or by letting the destructor do it.
+ * Internally allocates new blocks of memory when needed and
+ * gives the user small pieces of that memory. The blocks are
+ * kept in a linked list for future freeing.
+ */
 struct Alloc
 {
     struct Block
@@ -35,7 +45,10 @@ struct Alloc
 
         if (ptr + size > end)
         {
-            alloc_block(16*1024);
+            if (size + alignment - 1 > BLOCK_SIZE)
+                alloc_block(size + alignment); // some extra space for aligning
+            else
+                alloc_block(BLOCK_SIZE);
             ptr = align(current, alignment);
         }
 

@@ -4,6 +4,9 @@
 #include <cstdint>
 #include <cstring>
 
+/**
+ *
+ */
 struct Str
 {
     uint32_t hash;

@@ -9,18 +9,25 @@ union Value
     uint64_t uvalue;
 };
 
+/**
+ * Function calls might not return anything.
+ */
 struct Voidable
 {
     Value value;
     bool is_void;
 };
 
+/**
+ * Very simple evaluator that is used for testing IR generation.
+ */
 struct Evaluator
 {
     int env_index;
     // TODO: Better environment.
+    // NOTE: Temp ids are used as indices to the environment.
     Value env[20][100]; // max 20 nested calls, max 100 temps per call
-    List<Routine*> routines;
+    List<Routine*> routines; // routine table can be indexed with routine ids
 
     Voidable lastval; // for tests... which is not very intuitive :S
 
@@ -116,11 +123,11 @@ struct Evaluator
                     break;
                 case IR::JZ:
                     if (get(quad.left).uvalue == 0)
-                        i = quad.target.label;
+                        i = quad.target.label; // for loop's i++ will skip the label quad
                     break;
                 case IR::JNZ:
                     if (get(quad.left).uvalue != 0)
-                        i = quad.target.label;
+                        i = quad.target.label; // for loop's i++ will skip the label quad
                     break;
                 case IR::LABEL:
                     break;
@@ -163,6 +170,7 @@ struct Evaluator
 
     void eval(IR ir)
     {
+        // initialize routine table
         Routine *routine = ir.routines;
         while (routine)
         {

@@ -4,6 +4,10 @@
 #include "ast.h"
 #include "token.h"
 
+/**
+ * Allocates AST nodes and expressions.
+ * Uses the given instance of Alloc for the allocations.
+ */
 struct AstAlloc
 {
     struct Alloc &a;

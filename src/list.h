@@ -6,6 +6,10 @@
 #include <cstdint>
 #include <cstdlib>
 
+
+/**
+ * Dynamic array that can be used as a stack or a list.
+ */
 template <class T>
 struct List
 {

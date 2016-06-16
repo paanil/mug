@@ -15,6 +15,10 @@ enum OutputMode
     OutputMode_OBJ,
 };
 
+/**
+ * Generates assembly from the source file and places it into the output file.
+ * Implemented below main function.
+ */
 int compile(const char *source_file, const char *output_file);
 
 int invoke(const char *command)
@@ -56,6 +60,8 @@ int main(int argc, const char **argv)
         print_help();
         return 0;
     }
+
+    // Parse arguments.
 
     const char *source = nullptr;
     const char *output = nullptr;
@@ -110,6 +116,7 @@ int main(int argc, const char **argv)
         return 1;
     }
 
+    // Do the job.
 
     if (mode == OutputMode_ASM)
         return compile(source, output ? output : "out.s");

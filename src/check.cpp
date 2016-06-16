@@ -27,6 +27,9 @@ bool can_cast(Type from, Type to)
     return false;
 }
 
+/**
+ * Does the actual checking of the AST.
+ */
 struct Checker
 {
     SymTable<Type> sym;

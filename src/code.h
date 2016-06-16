@@ -35,10 +35,12 @@
     PASTE_INSTR(JMP)        \
     PASTE_INSTR(JE)         \
     PASTE_INSTR(JNE)        \
-    PASTE_INSTR(PUSH_ARG)   \
+    PASTE_INSTR(SET_ARG)    \
     PASTE_INSTR(CALL)
 
-
+/**
+ * A single instruction.
+ */
 struct Instr
 {
 #define PASTE_INSTR(i) i,
@@ -64,6 +66,11 @@ struct Instr
     Operand oper2;
 };
 
+/**
+ * Contains a list of instructions that are to be written to the output file.
+ * When write_routine() is called, the instructions are written and the
+ * list of instructions is emptied.
+ */
 struct Code
 {
     List<Str> routines;
@@ -163,7 +170,7 @@ struct Code
                 case Instr::JNE:
                     fprintf(f, "\t" "jne .l%u\n", instr.oper1.label);
                     break;
-                case Instr::PUSH_ARG:
+                case Instr::SET_ARG:
                     fprintf(f, "\t" "mov [rsp%+d], %s\n",
                             instr.oper1.offset,
                             Register::get_str(instr.oper2.reg_id));
@@ -258,9 +265,9 @@ struct Code
         ADD1(JNE, label = label);
     }
 
-    void push_arg(int32_t stack_offset, Register reg)
+    void set_arg(int32_t stack_offset, Register reg)
     {
-        ADD2(PUSH_ARG, offset = stack_offset, reg_id = reg.id);
+        ADD2(SET_ARG, offset = stack_offset, reg_id = reg.id);
     }
 
     void call(uint32_t routine_id)

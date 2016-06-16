@@ -39,6 +39,11 @@ i64 call_test();
 i64 call_test2();
 i64 call_test3();
 i64 call_test4();
+i64 call_test5();
+i64 call_test6();
+i64 call_test7();
+i64 call_test8();
+i64 call_test9();
 
 i64 basic_block_test(bool b);
 
@@ -123,11 +128,14 @@ int main()
     TEST(call_test2(), 72);
     TEST(call_test3(), 72);
     TEST(call_test4(), 72);
+    TEST(call_test5(), 10);
+    TEST(call_test6(), 30);
+    TEST(call_test7(), 40);
+    TEST(call_test8(), -22);
+    TEST(call_test9(), -22);
 
     TEST(basic_block_test(true), 170);
     TEST(basic_block_test(false), 150);
-
-    // TODO: call tests with params on stack
 
     return 0;
 }

@@ -3,11 +3,14 @@
 #include "register_alloc.h"
 #include "code.h"
 
+/**
+ * The actual code generator.
+ */
 struct CodeGen
 {
     struct Temp
     {
-        RegID reg_id; // Register that has the temp in it or none.
+        RegID reg_id; // Register that has the temp in it or Reg_NONE.
         int32_t base_offset;
         bool spilled;
     };
@@ -31,7 +34,7 @@ struct CodeGen
         Temp &temp = temps[reg.temp_id];
         if (!temp.spilled)
         {
-            if (temp.base_offset == 0)
+            if (temp.base_offset == 0) // Parameters have offset even if they are not spilled yet.
                 temp.base_offset = -8 - 8 * spilled_count++;
             temp.spilled = true;
         }
@@ -276,8 +279,8 @@ struct CodeGen
                     else
                     {
                         reg = get_any_register_for(temp_id, true);
+                        code.set_arg(i*8, reg);
                     }
-                    code.push_arg(i*8, reg);
                 }
                 args.resize(0);
 
@@ -334,6 +337,7 @@ struct CodeGen
             {
                 temps[i].spilled = true;
             }
+            // NOTE: All parameters have space on the stack for spilling.
             temps[i].base_offset = 16 + 8 * i;
         }
 
@@ -343,10 +347,33 @@ struct CodeGen
             gen_code((*routine)[i]);
         }
 
-        int stack_slots = (spilled_count + max_arg_count + 1u) & ~1u;
-        code.write_routine(routine->name, stack_slots * 8u);
+        // NOTE: On windows, when you make a call, there must be 32
+        // bytes of shadow space on the stack for the called function
+        // to use. This space is for the 4 first parameters if they
+        // need to be spilled. The shadow space is needed even if there
+        // are less than 4 parameters.
+
+        // Number of 8 byte stack slots needed is the number of spilled
+        // temps plus the maximum number of arguments (at least 4) any
+        // function call inside this routine ever needs.
+        // That way we don't have to push and pop arguments to and from
+        // the stack when we make a call.
+        // The stack must have alignment of 16 bytes when a call is made.
+        // We ensure this by reserving even number of 8 byte slots from
+        // the stack.
+
+        int arg_count = max_arg_count;
+        if (arg_count < PARAM_REG_COUNT)
+            arg_count = PARAM_REG_COUNT;
+
+        int stack_slots = (spilled_count + arg_count + 1u) & ~1u;
+        code.write_routine(routine->name, stack_slots * 8u); // 8 bytes per stack slot
     }
 };
+
+//
+//
+//
 
 void gen_code(IR ir, FILE *f)
 {
