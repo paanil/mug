@@ -46,6 +46,11 @@ void print_help()
 
 int main(int argc, const char **argv)
 {
+#ifdef TEST_BUILD
+    run_tests();
+    return 0;
+#endif // TEST_BUILD
+
     if (argc < 2)
     {
         print_help();
@@ -55,7 +60,6 @@ int main(int argc, const char **argv)
     const char *source = nullptr;
     const char *output = nullptr;
     OutputMode mode = OutputMode_EXE;
-    char buf[1024];
 
     for (int i = 1; i < argc; i++)
     {

@@ -1,11 +1,13 @@
 @echo off
 mkdir build
-echo Compiling mug...
-g++ -std=c++11 src\*.cpp -o build\mug.exe
-rem g++ -Wall -Wextra -Wzero-as-null-pointer-constant -std=c++11 src\*.cpp -o build\mug.exe
+echo Compiling mug test build...
+g++ -std=c++11 -DTEST_BUILD -o build\mug.exe src\*.cpp
 
 echo Running unit tests...
 build\mug.exe
+
+echo Compiling mug...
+g++ -std=c++11 -o build\mug.exe src\*.cpp
 
 echo Compiling code_gen_tests...
 build\mug.exe -c -o build\code_gen_tests.o tests\code_gen_tests.mug
