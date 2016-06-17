@@ -125,9 +125,9 @@ int main(int argc, const char **argv)
         return 1;
 
     if (mode == OutputMode_OBJ)
-        return invoke("yasm -f win64 -o %s out.s", output ? output : "out.o");
+        return invoke("nasm -f win64 -o %s out.s", output ? output : "out.o");
 
-    if (invoke("yasm -f win64 -o out.o out.s") != 0)
+    if (invoke("nasm -f win64 -o out.o out.s") != 0)
         return 1;
 
     return invoke("gcc -o %s out.o", output ? output : "out.exe");
