@@ -17,7 +17,7 @@ enum OutputMode
 
 /**
  * Generates assembly from the source file and places it into the output file.
- * Implemented below main function.
+ * Implemented in this file after main function.
  */
 int compile(const char *source_file, const char *output_file);
 
