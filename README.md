@@ -1,13 +1,16 @@
 # mug
 
-## Participants
+A compiler that outputs AMD64 assembly for NASM to assemble.
+The source language is also called mug.
+The compiler's output uses Windows compatible calling conventions.
 
+The whole thing was made by
 * Ilari Paananen ilari.k.paananen@student.jyu.fi
 
 ## Summary
 
 - target language AMD64, Windows' calling convention
-- prefered OS for testing: Windows
+- recommended OS for testing: Windows
 - needed to compile mug: g++ with C++11 support (GCC 5.3.0 works)
 - needed to assemble and link mug's output: NASM and GCC
 
@@ -91,7 +94,17 @@ all the resulting output files.
 As can be seen, the output file can be specified only for the last file
 to be created. Other files will have the default name ('out' dot something).
 
+There are more examples under the examples/ directory (actually not yet).
+They...
+
 ## Testing the compiler
+
+The run_tests.bat batch file compiles the mug compiler and the test
+build of mug. It runs the test build which runs the unit tests.
+It also compiles the code generation tests and runs them. All of the
+files created are placed in a build/ directory.
+
+The batch file works on Windows. All it does can be done by hand.
     
 Test build of mug can be compiled with the following command:
 
@@ -110,7 +123,13 @@ It compares the return values to the expected ones and prints the results.
 
 ## Still missing or misbehaving features
 
-
+- Size of all types (even boolean) is 64 bits. The suffix in uint8, int16,
+  etc. doesn't mean anything.
+- There are no pointer types.
+- For loops are not supported.
+- Top level statements have no effect (but they are allowed for parser tests
+  etc. and they are intended to work some day).
+- Globals don't work either.
 
 ## Initial idea
 
