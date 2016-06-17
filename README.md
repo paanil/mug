@@ -10,8 +10,6 @@
 - prefered OS for testing: Windows
 - needed to compile mug: g++ with C++11 support (GCC 5.3.0 works)
 - needed to assemble and link mug's output: NASM and GCC
-- in Windows, with nasm and gcc on path, mug can do the whole
-  some-source-file-name.mug => some-executable-name.exe compilation
 
 ## Compiling the compiler
 
@@ -57,36 +55,41 @@ Invoking mug can create three kinds of files:
 - executables created by gcc (on Windows, .exe)
 
 The examples/example.mug is a program that exits with return value 42.
+Here is a list of all the possible ways it can be compiled with mug and
+all the resulting output files.
 
-1
+1. Only assembly, output file not specified:
 
-    mug -s examples/example.mug
-    => out.s
+        mug -s examples/example.mug
+        => out.s
 
-2
+2. Only assembly, output file 'example.s':
 
-    mug -s -o example.s examples/examples.mug
-    => example.s
+        mug -s -o example.s examples/example.mug
+        => example.s
 
-3
+3. Assembly and object file, output file not specified:
 
-    mug -c examples/examples.mug
-    => out.s, out.o
+        mug -c examples/example.mug
+        => out.s, out.o
 
-4
+4. Assembly and object file, output file 'example.o':
 
-    mug -c -o example.o examples/examples.mug
-    => out.s, example.o
+        mug -c -o example.o examples/example.mug
+        => out.s, example.o
 
-5
+5. Assembly, object file, and executable, output file not specified:
 
-    mug examples/example.mug
-    => out.s, out.o, out.exe
+        mug examples/example.mug
+        => out.s, out.o, out.exe
 
-6
+6. Assembly, object file, and executable, output file 'example.exe':
 
-    mug -o example.exe examples/examples.mug
-    => out.s, out.o, example.exe
+        mug -o example.exe examples/example.mug
+        => out.s, out.o, example.exe
+
+As can be seen, the output file can be specified only for the last file
+to be created. Other files will have the default name ('out' dot something).
 
 ## Testing the compiler
     
@@ -104,6 +107,10 @@ and linked to the test program (written in C) with gcc:
 
 code_gen_tests will call different functions written in mug (the language).
 It compares the return values to the expected ones and prints the results.
+
+## Still missing or misbehaving features
+
+
 
 ## Initial idea
 
