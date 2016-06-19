@@ -7,9 +7,14 @@ The compiler's output uses Windows compatible calling conventions.
 The whole thing was made by
 * Ilari Paananen ilari.k.paananen@student.jyu.fi
 
+The work should be worth 5 credits because it has:
+- all the mandatory features (3 credits)
+- IR generation (1 credit)
+- AMD64 code generation with naive register allocation (1 credit)
+
 ## Summary
 
-- target language AMD64, Windows' calling convention
+- target language AMD64, Windows compatible calling convention
 - recommended OS for testing: Windows
 - needed to compile mug: g++ with C++11 support (GCC 5.3.0 works)
 - needed to assemble and link mug's output: NASM and GCC
@@ -94,8 +99,11 @@ all the resulting output files.
 As can be seen, the output file can be specified only for the last file
 to be created. Other files will have the default name ('out' dot something).
 
-There are more examples under the examples/ directory (actually not yet).
-They...
+There are more examples under the examples/ directory. They can be easily tested
+by first compiling with the method 5 and then running the resulting out.exe:
+
+    mug examples/<file-name>.mug
+    out.exe
 
 ## Testing the compiler
 
@@ -130,6 +138,8 @@ It compares the return values to the expected ones and prints the results.
 - Top level statements have no effect (but they are allowed for parser tests
   etc. and they are intended to work some day).
 - Globals don't work either.
+- Callee save registers are not used.
+- It would be nice to be able to call external functions.
 
 ## Initial idea
 
