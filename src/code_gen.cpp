@@ -262,7 +262,6 @@ struct CodeGen
             {
                 end_basic_block();
 
-
                 int arg_count = args.get_size();
                 if (arg_count > (int)max_arg_count)
                     max_arg_count = arg_count;

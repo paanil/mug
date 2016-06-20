@@ -1,6 +1,5 @@
 #!/bin/sh
 
-@echo off
 mkdir build
 echo Compiling mug test build...
 g++ -std=c++11 -DTEST_BUILD -o build/mug_test src/*.cpp
