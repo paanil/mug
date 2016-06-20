@@ -112,6 +112,8 @@ The hello example has .mug and .c file so gcc needs to be invoked by hand:
     gcc -o hello examples/hello.c out.o
     hello.exe
 
+NOTE: The hello example works only on Windows.
+
 ## Testing the compiler
 
 The run_tests.sh script compiles the mug compiler and the test
@@ -120,10 +122,11 @@ It also compiles the code generation tests and runs them.
 Then it compiles the external call test and runs it.
 All of the files created are placed in a build/ directory.
 
-All the script does can be done by hand.
 NOTE: The external call test and code generation tests work
 only on Windows because there is C involved.
-    
+
+All the script does can be done by hand.
+
 Test build of mug can be compiled with the following command:
 
     g++ -std=c++11 -DTEST_BUILD -o mug_test src/*.cpp
