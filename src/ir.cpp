@@ -5,6 +5,7 @@
 #include "assert.h"
 
 #include <cstdio>
+#include <cinttypes>
 #include <new> // to placement new routines
 
 
@@ -399,7 +400,7 @@ void print_ir(Routine *routine)
         switch (quad.op)
         {
         case IR::MOV_IM:
-            fprintf(stdout, "temp%u \t%llu \t-\n", quad.target.temp_id, quad.left.int_value);
+            fprintf(stdout, "temp%u \t%" PRIu64 " \t-\n", quad.target.temp_id, quad.left.int_value);
             break;
         case IR::MOV:
             fprintf(stdout, "temp%u \ttemp%u \t-\n", quad.target.temp_id, quad.left.temp_id);

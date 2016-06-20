@@ -1,6 +1,7 @@
 #include "ast.h"
 
 #include <cstdio>
+#include <cinttypes>
 
 
 // assert that the node types are ok.
@@ -81,7 +82,7 @@ void print_exp(Expression *exp)
             fprintf(stdout, "%s", exp->boolean.value ? "true" : "false");
             break;
         case ExpType_CONST:
-            fprintf(stdout, "%llu", exp->constant.value);
+            fprintf(stdout, "%" PRIu64, exp->constant.value);
             break;
         case ExpType_VAR:
             fprintf(stdout, "%s", exp->var.name.data);

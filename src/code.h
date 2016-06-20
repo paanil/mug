@@ -3,6 +3,8 @@
 
 #include "list.h"
 
+#include <cinttypes>
+
 #define PASTE_INSTRS        \
     PASTE_INSTR(STORE)      \
     PASTE_INSTR(LOAD)       \
@@ -100,7 +102,7 @@ struct Code
         break
 #define CASE_REG_VAL(Type, name) \
     case Instr::Type: \
-        fprintf(f, "\t" #name " %s, %llu\n", \
+        fprintf(f, "\t" #name " %s, %" PRIu64 "\n", \
                 Register::get_str(instr.oper1.reg_id), \
                 instr.oper2.value); \
         break
