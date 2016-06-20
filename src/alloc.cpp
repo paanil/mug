@@ -2,6 +2,7 @@
 #include "assert.h"
 
 #include <cstdlib>
+#include <cstdint>
 
 char *Alloc::align(char *ptr, unsigned alignment)
 {
