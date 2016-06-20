@@ -155,7 +155,7 @@ DEF_NODE(FuncDefNode)
     Type ret_type;
     Str name;
     ParamList *params;
-    struct Node *body;
+    struct Node *body; // hack: if body == nullptr, the function is extern
 END_NODE
 
 //

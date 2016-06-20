@@ -311,6 +311,9 @@ struct CodeGen
 
     void gen_code(Routine *routine)
     {
+        if (routine->external)
+            return;
+
         spilled_count = 0;
         max_arg_count = 0;
         regs.reset();
@@ -395,7 +398,14 @@ void gen_code(IR ir, FILE *f)
     while (routine)
     {
         code.routine(routine->name);
-        fprintf(f, "\t" "global %s\n", routine->name.data);
+        if (routine->external)
+        {
+            fprintf(f, "\t" "extern %s\n", routine->name.data);
+        }
+        else
+        {
+            fprintf(f, "\t" "global %s\n", routine->name.data);
+        }
         routine = routine->next;
     }
 

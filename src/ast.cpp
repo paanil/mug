@@ -184,6 +184,9 @@ void print_node(Node *node)
         }
         case NodeType_FUNC_DEF:
         {
+            if (node->func_def.body == nullptr)
+                fprintf(stdout, "extern ");
+
             fprintf(stdout, "function %s(", node->func_def.name.data);
             if (node->func_def.params)
             {
@@ -199,7 +202,10 @@ void print_node(Node *node)
             fprintf(stdout, ") ");
             if (node->func_def.ret_type.type != Type::VOID)
                 fprintf(stdout, "-> %s ", Type::get_str(node->func_def.ret_type));
-            print_node(node->func_def.body);
+
+            if (node->func_def.body != nullptr)
+                print_node(node->func_def.body);
+
             break;
         }
     }

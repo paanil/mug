@@ -1,0 +1,20 @@
+
+extern function print_char(int c);
+extern function fibo(int n) -> int;
+
+function main() -> int {
+    if (fibo(12) != 144) {
+        print_char(69); // E
+        print_char(82); // R
+        print_char(82); // R
+        print_char(79); // O
+        print_char(82); // R
+        print_char(10); // \n
+        return 1;
+    }
+    
+    print_char(79); // O
+    print_char(75); // K
+    print_char(10); // \n
+    return 0;
+}

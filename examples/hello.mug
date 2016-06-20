@@ -1,0 +1,20 @@
+
+extern function print_char(int c);
+
+function main() -> int {
+    print_char(72);  // H
+    print_char(101); // e
+    print_char(108); // l
+    print_char(108); // l
+    print_char(111); // o
+    print_char(44);  // ,
+    print_char(32);  //  
+    print_char(87);  // W
+    print_char(111); // o
+    print_char(114); // r
+    print_char(108); // l
+    print_char(100); // d
+    print_char(33);  // !
+    print_char(10);  // \n
+    return 0;
+}

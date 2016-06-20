@@ -53,7 +53,7 @@ for Linux if one gives the -s flag to mug and invokes nasm and gcc by hand.
 
 Note: mug targets AMD64 and uses Windows specific calling conventions.
 The latter makes it impossible(?) to call mug functions from C on Linux
-(and also the other way around, if mug supported such a feature).
+and also the other way around.
 
 ### Examples
 
@@ -99,20 +99,30 @@ all the resulting output files.
 As can be seen, the output file can be specified only for the last file
 to be created. Other files will have the default name ('out' dot something).
 
-There are more examples under the examples/ directory. They can be easily tested
-by first compiling with the method 5 and then running the resulting out.exe:
+There are more examples under the examples/ directory. The fibo.mug and
+fibo_iterative.mug can be easily tested by first compiling with the method 5
+and then running the resulting out.exe:
 
     mug examples/<file-name>.mug
     out.exe
+
+The hello example has .mug and .c file so gcc needs to be invoked by hand:
+
+    mug -c examples/hello.mug
+    gcc -o hello.exe examples/hello.c out.o
+    hello.exe
 
 ## Testing the compiler
 
 The run_tests.bat batch file compiles the mug compiler and the test
 build of mug. It runs the test build which runs the unit tests.
-It also compiles the code generation tests and runs them. All of the
-files created are placed in a build/ directory.
+It also compiles the code generation tests and runs them.
+Then it compiles the external call test and runs it.
+All of the files created are placed in a build/ directory.
 
 The batch file works on Windows. All it does can be done by hand.
+Note that the code generation tests and external call test work
+only on Windows because there is C involved.
     
 Test build of mug can be compiled with the following command:
 
@@ -129,6 +139,16 @@ and linked to the test program (written in C) with gcc:
 code_gen_tests will call different functions written in mug (the language).
 It compares the return values to the expected ones and prints the results.
 
+External call test has two .mug files and one .c file. It can be compiled:
+
+    mug -c -o external_call_test.o tests/external_call_test.mug
+    mug -c -o external_fibo.o tests/external_fibo.mug
+    gcc -o external_call_test external_call_test.o external_fibo.o tests/external_call_test.c
+
+The external_call_test calls fibo() defined in the external_fibo.mug and
+compares the result with the expected one. The test will print "OK" or "ERROR"
+by calling print_char() defined in external_call_test.c.
+
 ## Still missing or misbehaving features
 
 - Size of all types (even boolean) is 64 bits. The suffix in uint8, int16,
@@ -139,7 +159,6 @@ It compares the return values to the expected ones and prints the results.
   etc. and they are intended to work some day).
 - Globals don't work either.
 - Callee save registers are not used.
-- It would be nice to be able to call external functions.
 
 ## Initial idea
 

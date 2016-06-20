@@ -342,6 +342,12 @@ struct IRGen
                 func.func_id = routine->id;
                 sym.put(node->func_def.name, func);
 
+                if (node->func_def.body == nullptr)
+                {
+                    routine->external = true;
+                    break;
+                }
+
                 sym.enter_scope();
 
                 uint32_t param_count = 0;

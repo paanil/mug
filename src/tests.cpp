@@ -162,6 +162,7 @@ void run_static_check_tests()
     TEST("int x = 0; while (true) x = x + 1;");
     TEST("int x = 1; int i = 0; while (i < 10) { x = x + x; i = i + 1; }");
     TEST("5 < 10; 10u > 5u;");
+    TEST("extern function f() -> uint; 10u < f();");
 
     TEST_FAIL("x;")
     TEST_FAIL("x + 13;")
@@ -185,6 +186,8 @@ void run_static_check_tests()
     TEST_FAIL("while (false) { int x = 0; x = x + y; }")
     TEST_FAIL("5 < 10u;")
     TEST_FAIL("function f() {} function f(int x) {}")
+    TEST_FAIL("extern function f(); 10u < f();")
+    TEST_FAIL("extern function f() -> int; 10u < f();")
 
     fprintf(stdout, "------------------------------\n");
     fprintf(stdout, "ran %d static check tests: %d succeeded, %d failed.\n\n\n", tests, tests - failed, failed);
@@ -242,6 +245,10 @@ void run_parser_tests()
     TEST("function f() { g(15*3 + 2); }")
     TEST("function f(int x) { g(15*x + 2); }")
     TEST("function f(int x, int y) -> int { if (x > y) return 1; else if (x < y) return -1; else return 0; }")
+    TEST("extern function f();")
+    TEST("extern function f();")
+    TEST("extern function f(int x, int y);")
+    TEST("extern function f(int x, int y) -> uint;")
 
     TEST_FAIL("function f(); { g(15*3 + 2); }")
     TEST_FAIL("{if}")
@@ -262,6 +269,10 @@ void run_parser_tests()
     TEST_FAIL("function h(int 5) {}")
     TEST_FAIL("function h(int x, y) {}")
     TEST_FAIL("function f() { function g() {} }")
+    TEST_FAIL("function f() { function g() {} }")
+    TEST_FAIL("extern")
+    TEST_FAIL("extern function f() {}")
+    TEST_FAIL("function f();")
 
     fprintf(stdout, "------------------------------\n");
     fprintf(stdout, "ran %d parser tests: %d succeeded, %d failed.\n\n\n", tests, tests - failed, failed);
@@ -350,14 +361,14 @@ void run_lexer_tests()
             TT_LIST_8(NOT,STAR,SLASH,PLUS,MINUS,AMP,PIPE,EQ),
             TT_LIST_8(NE,LT,GT,LE,GE,AND,OR,ASSIGN),
             TT_LIST_8(ARROW,LPAREN,RPAREN,LBRACE,RBRACE,COMMA,SEMICOLON,IF),
-            TT_LIST_8(ELSE,WHILE,FUNCTION,RETURN,INT,INT8,INT16,INT32),
-            TT_LIST_8(INT64,UINT,UINT8,UINT16,UINT32,UINT64,BOOL,TRUE),
-            TT_LIST_8(FALSE,IDENT,INT_LIT,UINT_LIT,INVALID,END,END,END)
+            TT_LIST_8(ELSE,WHILE,EXTERN,FUNCTION,RETURN,INT,INT8,INT16),
+            TT_LIST_8(INT32,INT64,UINT,UINT8,UINT16,UINT32,UINT64,BOOL),
+            TT_LIST_8(TRUE,FALSE,IDENT,INT_LIT,UINT_LIT,INVALID,END,END)
         };
 
         TEST(test_expected,
              "!*/+-&|==!=<><=>=&&||= // single line comment\n"
-             "->(){},;"  "if else while function return /* multi\n  line\n  comment */"
+             "->(){},;"  "if else while extern function return /* multi\n  line\n  comment */"
              "int int8 int16 int32 int64 uint uint8 uint16 uint32 uint64 bool true false asdf 12345 6789u å",
              expected_tokens)
     }

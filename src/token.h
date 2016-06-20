@@ -31,6 +31,7 @@
     PASTE_TOKEN(IF, "if")                  \
     PASTE_TOKEN(ELSE, "else")              \
     PASTE_TOKEN(WHILE, "while")            \
+    PASTE_TOKEN(EXTERN, "extern")          \
     PASTE_TOKEN(FUNCTION, "function")      \
     PASTE_TOKEN(RETURN, "return")          \
     PASTE_TOKEN(INT, "int")                \

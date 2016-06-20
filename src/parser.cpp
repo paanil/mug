@@ -306,6 +306,8 @@ Node *Parser::parse_statement()
 
 Node *Parser::parse_function_def()
 {
+    bool external = accept(Token::EXTERN);
+
     if (accept(Token::FUNCTION))
     {
         Str ident = token.text;
@@ -338,6 +340,15 @@ Node *Parser::parse_function_def()
             }
         }
 
+        if (external)
+        {
+            if (!expect(Token::SEMICOLON))
+                return nullptr;
+
+            // hack: if body == nullptr, the function is external
+            return a.func_def_node(ret_type, ident, params.next, nullptr);
+        }
+
         if (!expect(Token::LBRACE))
             return nullptr;
 
@@ -349,6 +360,11 @@ Node *Parser::parse_function_def()
             return nullptr;
 
         return a.func_def_node(ret_type, ident, params.next, statements);
+    }
+    else if (external)
+    {
+        expected_error("function declaration after 'extern'");
+        return nullptr;
     }
 
     return nullptr;

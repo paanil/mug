@@ -357,6 +357,9 @@ bool Checker::type_check(Node *node)
             Type type = { Type::FUNC, &node->func_def };
             sym.put(node->func_def.name, type);
 
+            if (node->func_def.body == nullptr) // external function
+                return true;
+
             sym.enter_scope();
             sym.put(Str::make("@return"), node->func_def.ret_type);
 

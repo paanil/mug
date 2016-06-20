@@ -20,6 +20,8 @@ struct Voidable
 
 /**
  * Very simple evaluator that is used for testing IR generation.
+ * The evaluator doesn't call external functions. All external
+ * routines evaluate to void.
  */
 struct Evaluator
 {
@@ -135,6 +137,7 @@ struct Evaluator
                 {
                     assert(env_index < 20);
                     env_index++;
+                    // NOTE: External routines have no quads => evaluation just returns void.
                     Voidable rv = eval(routines[quad.left.func_id]);
                     env_index--;
                     set(quad.target, rv.value.uvalue);

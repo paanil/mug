@@ -60,6 +60,8 @@ struct Routine
     uint32_t id;
     Routine *next;
 
+    bool external;
+
     Alloc &a;
 
     Routine(Str name_, uint32_t id_, Alloc &a_)
@@ -71,6 +73,7 @@ struct Routine
     , name(name_)
     , id(id_)
     , next()
+    , external(false)
     , a(a_)
     {}
 
