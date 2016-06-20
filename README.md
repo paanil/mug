@@ -48,10 +48,10 @@ To compile an executable with mug, NASM and GCC should be in path as
 
     nasm and gcc
 
-mug invokes nasm with the flag -f win64. One should be able to compile
+NOTE: mug invokes nasm with the flag -f win64. One should be able to compile
 for Linux if one gives the -s flag to mug and invokes nasm and gcc by hand.
 
-Note: mug targets AMD64 and uses Windows specific calling conventions.
+NOTE: mug targets AMD64 and uses Windows specific calling conventions.
 The latter makes it impossible(?) to call mug functions from C on Linux
 and also the other way around.
 
@@ -91,9 +91,9 @@ all the resulting output files.
         mug examples/example.mug
         => out.s, out.o, out.exe
 
-6. Assembly, object file, and executable, output file 'example.exe':
+6. Assembly, object file, and executable, output file 'example':
 
-        mug -o example.exe examples/example.mug
+        mug -o example examples/example.mug
         => out.s, out.o, example.exe
 
 As can be seen, the output file can be specified only for the last file
@@ -109,41 +109,41 @@ and then running the resulting out.exe:
 The hello example has .mug and .c file so gcc needs to be invoked by hand:
 
     mug -c examples/hello.mug
-    gcc -o hello.exe examples/hello.c out.o
+    gcc -o hello examples/hello.c out.o
     hello.exe
 
 ## Testing the compiler
 
-The run_tests.bat batch file compiles the mug compiler and the test
+The run_tests.sh script compiles the mug compiler and the test
 build of mug. It runs the test build which runs the unit tests.
 It also compiles the code generation tests and runs them.
 Then it compiles the external call test and runs it.
 All of the files created are placed in a build/ directory.
 
-The batch file works on Windows. All it does can be done by hand.
-Note that the code generation tests and external call test work
+All the script does can be done by hand.
+NOTE: The external call test and code generation tests work
 only on Windows because there is C involved.
     
 Test build of mug can be compiled with the following command:
 
     g++ -std=c++11 -DTEST_BUILD -o mug_test src/*.cpp
 
-mug_test will run the unit tests and print the results of said tests.
+The mug_test will run the unit tests and print the results of said tests.
 
 Code generation tests need to be compiled with mug (not the test build one)
 and linked to the test program (written in C) with gcc:
 
-    mug -c -o code_gen_tests.o tests/code_gen_tests.mug
-    gcc -o code_gen_tests code_gen_tests.o tests/code_gen_tests.c
+    mug -c tests/code_gen_tests.mug
+    gcc -o code_gen_tests tests/code_gen_tests.c out.o
 
-code_gen_tests will call different functions written in mug (the language).
+The code_gen_tests calls different functions written in mug (the language).
 It compares the return values to the expected ones and prints the results.
 
-External call test has two .mug files and one .c file. It can be compiled:
+External call test has two .mug files and one .c file. It can be compiled with:
 
-    mug -c -o external_call_test.o tests/external_call_test.mug
-    mug -c -o external_fibo.o tests/external_fibo.mug
-    gcc -o external_call_test external_call_test.o external_fibo.o tests/external_call_test.c
+    mug -c -o call_test.o tests/external_call_test.mug
+    mug -c -o fibo.o tests/external_fibo.mug
+    gcc -o external_call_test tests/external_call_test.c call_test.o fibo.o
 
 The external_call_test calls fibo() defined in the external_fibo.mug and
 compares the result with the expected one. The test will print "OK" or "ERROR"
