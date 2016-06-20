@@ -1,7 +1,8 @@
 # mug
 
 A compiler that outputs AMD64 assembly for NASM to assemble.
-The source language is also called mug.
+The source language is also called mug and it is
+described in the file 'mug_language.txt'.
 The compiler's output uses Windows compatible calling conventions.
 
 The whole thing was made by

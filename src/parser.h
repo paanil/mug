@@ -18,8 +18,9 @@ statement := '{' statements '}'
 statements := statement statements | <none>
 type := 'int' | 'uint' | 'bool'
 parameters := type ident (',' parameters | <none>) | <none>
-function_def := 'function' ident '(' parameters ')' ('->' | <none>) '{' statements '}'
-top_level := (statement | function_def) top_level | <none>
+function_def := 'function' ident '(' parameters ')' ('->' type | <none>) '{' statements '}'
+extern_function := 'extern' 'function' ident '(' parameters ')' ('->' type | <none>) ';'
+top_level := (statement | function_def | extern_function) top_level | <none>
 
 expression := and ('||' expression | <none>)
 and := comparison ('&&' and | <none>)

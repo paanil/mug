@@ -1,0 +1,87 @@
+mug
+
+The mug programming language is a procedural language similar to C but a lot simpler.
+It has functions, if and while statements, signed and unsigned integer types,
+and boolean type. Code blocks are enclosed within braces, if and while
+conditions within parentheses. White spaces are just delimiters, semicolons end
+basic statements, and single and multi line comments are supported.
+
+Function definitions start with the keyword 'function' and return type is defined
+after parameters with an arrow '->'. External functions can be declared by putting
+the keyword 'extern' before a function and leaving the body of the function out
+(because the function is defined externally).
+
+Hopefully the code example after the grammar gives a better idea what the language is like.
+More examples can be found in the examples/ directory.
+
+
+The grammar of the language:
+
+statement := ';'
+statement := expression ';'
+statement := ident '=' expression ';'
+statement := type ident ('=' expression | <none>) ';'
+statement := return (expression | <none>) ';'
+statement := 'if' '(' expression ')' statement ('else' statement | <none>)
+statement := 'while' '(' expression ')' statement
+statement := '{' statements '}'
+statements := statement statements | <none>
+type := 'int' | 'uint' | 'bool'
+parameters := type ident (',' parameters | <none>) | <none>
+function_def := 'function' ident '(' parameters ')' ('->' type | <none>) '{' statements '}'
+extern_function := 'extern' 'function' ident '(' parameters ')' ('->' type | <none>) ';'
+top_level := (statement | function_def | extern_function) top_level | <none>
+
+expression := and ('||' expression | <none>)
+and := comparison ('&&' and | <none>)
+comparison := sum (('==' | '!=' | '<' | '>' | '<=' | '>=') comparison | <none>)
+sum := term (('+' | '-') sum | <none>)
+term := prefixed_factor (('*' |'/') term | <none>)
+prefixed_factor := ('-' | '!' | <none>) factor
+factor := ('true' | 'false') | const | ident | ident '(' arguments ')' | '(' expression ')'
+arguments := expression (',' arguments | <none>) | <none>
+
+
+Code example:
+
+// This is a single line comment.
+/* This
+   is a multi
+   line comment. */
+
+function name_of_the_function(int param1, uint param2, bool param3) -> int {
+    if (param2 < 10u && param3) // Unsigned integer literals have a trailing 'u'.
+        return param1 - 5;
+    return 0;
+}
+
+// External function could be defined in another mug source file or in a C file.
+extern function external_function_that_returns_nothing(int x);
+
+// The 'main' function is the entry point for the program.
+function main() -> int {
+    int x = name_of_the_function(10, 5u, true);
+    external_function_that_returns_nothing(x);
+    
+    int i = 0;
+    while (i < 5) {
+        x = x * 65;
+        i = i + 1;
+    }
+    
+    /*
+        There are signed and unsigned integer types with different bit sizes.
+        Signed integers:
+            int8, int16, int32, int64, int
+        Unsigned integers:
+            uint8, uint16, uint32, uint64, uint
+        Both int and uint are 64 bits.
+        
+        NOTE: In current implementation of mug all types are 64 bits!
+    */
+    int8 y = -96 / 5;
+    uint32 z = 2u * (123456789u - 123u);
+    bool w = !false;
+    
+    return 0;
+}
