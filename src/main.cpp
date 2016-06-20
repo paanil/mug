@@ -130,7 +130,7 @@ int main(int argc, const char **argv)
     if (invoke("nasm -f win64 -o out.o out.s") != 0)
         return 1;
 
-    return invoke("gcc -o %s out.o", output ? output : "out.exe");
+    return invoke("gcc -o %s out.o", output ? output : "out");
 }
 
 //
